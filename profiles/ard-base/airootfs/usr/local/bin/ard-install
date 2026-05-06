@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-install --disk /dev/nvme0n1 --hostname ard-os --username ard
+
+Options:
+  --disk       Target disk. This disk will be erased.
+  --hostname   Installed system hostname. Default: ard-os
+  --username   Primary user to create. Default: ard
+  --timezone   Timezone. Default: UTC
+  --locale     Locale. Default: en_US.UTF-8
+  --help       Show this help.
+
+This installer targets UEFI systems and creates:
+  1. 1 GiB FAT32 EFI system partition
+  2. remaining disk as ext4 root
+EOF
+}
+
+disk=""
+hostname="ard-os"
+username="ard"
+timezone="UTC"
+locale="en_US.UTF-8"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --disk)
+      disk="${2:-}"
+      shift 2
+      ;;
+    --hostname)
+      hostname="${2:-}"
+      shift 2
+      ;;
+    --username)
+      username="${2:-}"
+      shift 2
+      ;;
+    --timezone)
+      timezone="${2:-}"
+      shift 2
+      ;;
+    --locale)
+      locale="${2:-}"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$(id -u)" -ne 0 ]]; then
+  echo "Run as root." >&2
+  exit 1
+fi
+
+if [[ -z "$disk" || ! -b "$disk" ]]; then
+  echo "A valid --disk block device is required." >&2
+  usage
+  exit 2
+fi
+
+if [[ ! -d /sys/firmware/efi ]]; then
+  echo "UEFI firmware is required for this installer." >&2
+  exit 1
+fi
+
+echo "Target disk: $disk"
+echo "Hostname:    $hostname"
+echo "Username:    $username"
+echo
+lsblk "$disk"
+echo
+read -r -p "Type ERASE to destroy all data on $disk and install Ard OS: " confirm
+if [[ "$confirm" != "ERASE" ]]; then
+  echo "Install cancelled."
+  exit 1
+fi
+
+if [[ "$disk" =~ [0-9]$ ]]; then
+  efi_part="${disk}p1"
+  root_part="${disk}p2"
+else
+  efi_part="${disk}1"
+  root_part="${disk}2"
+fi
+
+timedatectl set-ntp true || true
+
+swapoff --all || true
+umount -R /mnt 2>/dev/null || true
+
+sgdisk --zap-all "$disk"
+parted --script "$disk" \
+  mklabel gpt \
+  mkpart ESP fat32 1MiB 1025MiB \
+  set 1 esp on \
+  mkpart primary ext4 1025MiB 100%
+partprobe "$disk"
+udevadm settle
+
+mkfs.fat -F32 "$efi_part"
+mkfs.ext4 -F -L ARDROOT "$root_part"
+
+mount "$root_part" /mnt
+mount --mkdir "$efi_part" /mnt/boot
+
+pacstrap -K /mnt \
+  base linux linux-firmware \
+  networkmanager sudo vim nano \
+  plasma-desktop plasma-nm sddm konsole dolphin firefox \
+  mesa intel-ucode amd-ucode
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt /bin/bash <<EOF
+set -euo pipefail
+ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
+hwclock --systohc
+sed -i 's/^#\\($locale UTF-8\\)/\\1/' /etc/locale.gen
+locale-gen
+printf 'LANG=$locale\n' > /etc/locale.conf
+printf '$hostname\n' > /etc/hostname
+cat > /etc/hosts <<HOSTS
+127.0.0.1 localhost
+::1 localhost
+127.0.1.1 $hostname.localdomain $hostname
+HOSTS
+bootctl install
+cat > /boot/loader/loader.conf <<LOADER
+default ard-os.conf
+timeout 3
+console-mode max
+editor no
+LOADER
+root_uuid="\$(blkid -s UUID -o value "$root_part")"
+cat > /boot/loader/entries/ard-os.conf <<ENTRY
+title Ard OS
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /amd-ucode.img
+initrd /initramfs-linux.img
+options root=UUID=\$root_uuid rw quiet
+ENTRY
+systemctl enable NetworkManager.service
+systemctl enable sddm.service
+useradd -m -G wheel -s /bin/bash "$username"
+printf 'Set password for $username:\n'
+passwd "$username"
+printf 'Set password for root:\n'
+passwd
+sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+EOF
+
+umount -R /mnt
+echo "Install complete. Reboot and remove the USB drive."

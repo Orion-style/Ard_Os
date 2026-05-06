@@ -1,0 +1,7 @@
+NAME="Ard OS"
+PRETTY_NAME="Ard OS Base"
+ID=ard
+ID_LIKE=arch
+BUILD_ID=base
+ANSI_COLOR="1;36"
+DOCUMENTATION_URL="https://wiki.archlinux.org/"

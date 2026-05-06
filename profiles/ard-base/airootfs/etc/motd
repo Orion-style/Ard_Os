@@ -1,0 +1,4 @@
+Ard OS Base Live ISO
+
+This image is the base-system foundation only.
+Run `sudo ard-install --help` to install Ard OS to a UEFI machine.
