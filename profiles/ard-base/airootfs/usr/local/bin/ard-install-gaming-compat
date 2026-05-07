@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-install-gaming-compat
+
+Installs the Stage 6 base Windows compatibility layer:
+  wine
+  wine-gecko
+  wine-mono
+  winetricks
+
+Run this only after Stage 5 graphics checks pass.
+EOF
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ "$#" -ne 0 ]]; then
+  echo "Unknown option: $1" >&2
+  usage
+  exit 2
+fi
+
+if [[ "$(id -u)" -ne 0 ]]; then
+  echo "Run as root." >&2
+  exit 1
+fi
+
+pacman -Syu --needed wine wine-gecko wine-mono winetricks
+
+echo "Gaming compatibility base installed. Run Wine as a normal user, not root."

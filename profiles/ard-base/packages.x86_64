@@ -46,7 +46,11 @@ vulkan-icd-loader
 vulkan-intel
 vulkan-radeon
 vulkan-tools
+wine
+wine-gecko
+wine-mono
 wireplumber
+winetricks
 xdg-user-dirs
 xorg-server
 xorg-xwayland

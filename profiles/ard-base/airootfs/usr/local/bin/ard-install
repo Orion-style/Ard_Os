@@ -130,6 +130,7 @@ pacstrap -K /mnt \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
   plasma-pa plasma-workspace xorg-server xorg-xwayland \
   mesa mesa-utils vulkan-icd-loader vulkan-intel vulkan-radeon vulkan-tools \
+  wine wine-gecko wine-mono winetricks \
   intel-ucode amd-ucode
 
 genfstab -U /mnt >> /mnt/etc/fstab

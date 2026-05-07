@@ -18,4 +18,5 @@ file_permissions=(
   ["/root/customize_airootfs.sh"]="0:0:755"
   ["/usr/local/bin/ard-install"]="0:0:755"
   ["/usr/local/bin/ard-install-gpu-drivers"]="0:0:755"
+  ["/usr/local/bin/ard-install-gaming-compat"]="0:0:755"
 )

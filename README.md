@@ -22,6 +22,7 @@ Reasons:
 - `scripts/build-iso.sh`: build helper for Linux hosts.
 - `scripts/test-qemu.sh`: QEMU boot test helper.
 - `docs/graphics-drivers-checklist.md`: Stage 5 graphics and driver validation.
+- `docs/gaming-compatibility-checklist.md`: Stage 6 Wine and Windows compatibility validation.
 
 ## Build Requirements
 
@@ -136,6 +137,22 @@ This covers older games, desktop components, interfaces, and graphics tests.
 
 Display validation must also pass: correct resolution, correct refresh rate, multiple monitors if connected, working screen after sleep, no black screen after reboot, and 3D applications starting. Move to Stage 6 only when Vulkan and OpenGL work without errors and the display is stable after sleep and reboot.
 
+## Gaming Compatibility Layer
+
+Stage 6 adds basic Windows program support through Wine:
+
+```text
+.exe game -> Wine/Proton -> DXVK/VKD3D -> Vulkan -> Linux -> graphics card
+```
+
+Install or refresh the base Wine set with:
+
+```bash
+sudo ard-install-gaming-compat
+```
+
+Run Wine as the normal user, not root. Do not continue to Proton, DXVK, VKD3D, or launchers until `wine --version`, `wineboot --init`, and `winecfg` work.
+
 ## Current Scope
 
 Included:
@@ -151,13 +168,13 @@ Included:
 - PipeWire audio with WirePlumber
 - GPU identification tools
 - AMD/Intel Mesa and Vulkan driver packages
+- Wine base compatibility packages
 - Firefox
 - Installer script for UEFI systems
 
 Deferred:
 
 - Proton
-- Wine
 - Steam or game launcher
 - custom launcher
 - GPU vendor tuning
