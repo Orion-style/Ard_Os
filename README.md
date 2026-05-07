@@ -21,6 +21,7 @@ Reasons:
 - `profiles/ard-base/airootfs`: files copied into the live ISO root filesystem.
 - `scripts/build-iso.sh`: build helper for Linux hosts.
 - `scripts/test-qemu.sh`: QEMU boot test helper.
+- `docs/graphics-drivers-checklist.md`: Stage 5 graphics and driver validation.
 
 ## Build Requirements
 
@@ -64,9 +65,76 @@ The installer is destructive and asks for confirmation before touching the targe
 After install and reboot:
 
 - systemd-boot starts the installed Ard OS system.
+- The Linux kernel starts from the installed root filesystem.
+- systemd reaches the graphical target.
 - KDE Plasma starts through SDDM.
 - NetworkManager manages internet access.
 - The created user can use `sudo`.
+- The created user is the normal account for work, games, and launchers.
+
+## User Model
+
+Ard OS uses `root` only for administration. Daily work, games, launchers, browsers, and the desktop session run as the normal user created by the installer.
+
+The default installed user is `ard` unless another name is passed with `--username`. That user has a home directory, a login shell, and `sudo` access through the `wheel` group.
+
+Games must not be launched as root.
+
+## Boot Chain
+
+Ard OS is not ready until the full boot chain succeeds:
+
+```text
+BIOS/UEFI -> systemd-boot -> Linux kernel -> systemd -> SDDM login screen -> KDE Plasma desktop
+```
+
+The installer configures this chain by creating an EFI system partition, installing systemd-boot, writing `/boot/loader/entries/ard-os.conf`, using the root filesystem UUID in the kernel command line, and enabling `sddm.service`.
+
+## Basic Work Check
+
+At the end of Stage 4, Ard OS should be a normal working Linux system. The PC should turn on, show the bootloader, load the system, open the login screen, log into the normal user account, open the desktop, reach the internet, play sound, install packages, and keep doing the same after reboot.
+
+Do not work on custom launchers, custom design, games, Proton, Wine, or release ISO creation in this stage. Do not move to Stage 5 until the basic checks still pass after several reboots.
+
+## Graphics And Drivers
+
+Stage 5 starts by identifying the installed graphics card. Run:
+
+```bash
+lspci -nnk | grep -EA3 'VGA|3D|Display'
+```
+
+Record whether the system uses NVIDIA, AMD, Intel, or hybrid graphics before choosing drivers. Gaming work should not start until GPU, Vulkan, OpenGL, resolution, refresh rate, and hardware acceleration are verified.
+
+For AMD and Intel systems, the base install includes Mesa, Vulkan loader/drivers, and validation tools. For NVIDIA systems, identify the exact GPU first, then install the NVIDIA driver set:
+
+```bash
+sudo ard-install-gpu-drivers --vendor nvidia
+```
+
+Vulkan must pass before Proton work:
+
+```text
+Windows game -> DirectX -> DXVK/VKD3D -> Vulkan -> graphics card
+```
+
+Validate it with:
+
+```bash
+vulkaninfo --summary
+```
+
+The reported GPU must be the real NVIDIA, AMD, or Intel device, not a software renderer.
+
+OpenGL must also report the real GPU:
+
+```bash
+glxinfo -B
+```
+
+This covers older games, desktop components, interfaces, and graphics tests.
+
+Display validation must also pass: correct resolution, correct refresh rate, multiple monitors if connected, working screen after sleep, no black screen after reboot, and 3D applications starting. Move to Stage 6 only when Vulkan and OpenGL work without errors and the display is stable after sleep and reboot.
 
 ## Current Scope
 
@@ -75,18 +143,26 @@ Included:
 - Arch Linux base
 - Linux kernel
 - systemd boot flow
+- disk, USB, and firmware support through Arch base packages
 - KDE Plasma desktop
+- Wayland and X11-compatible display stack
 - SDDM display manager
 - NetworkManager
+- PipeWire audio with WirePlumber
+- GPU identification tools
+- AMD/Intel Mesa and Vulkan driver packages
 - Firefox
 - Installer script for UEFI systems
 
 Deferred:
 
 - Proton
+- Wine
 - Steam or game launcher
+- custom launcher
 - GPU vendor tuning
 - Ard OS theme and branding
 - Secure Boot signing
+- release ISO creation workflow
 - Calamares or a graphical installer
 - custom package repository

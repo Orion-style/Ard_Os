@@ -9,7 +9,7 @@ Usage:
 Options:
   --disk       Target disk. This disk will be erased.
   --hostname   Installed system hostname. Default: ard-os
-  --username   Primary user to create. Default: ard
+  --username   Normal desktop user to create. Default: ard
   --timezone   Timezone. Default: UTC
   --locale     Locale. Default: en_US.UTF-8
   --help       Show this help.
@@ -71,6 +71,11 @@ if [[ -z "$disk" || ! -b "$disk" ]]; then
   exit 2
 fi
 
+if [[ "$username" == "root" || ! "$username" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+  echo "--username must be a normal Linux account name and cannot be root." >&2
+  exit 2
+fi
+
 if [[ ! -d /sys/firmware/efi ]]; then
   echo "UEFI firmware is required for this installer." >&2
   exit 1
@@ -79,6 +84,7 @@ fi
 echo "Target disk: $disk"
 echo "Hostname:    $hostname"
 echo "Username:    $username"
+echo "User model:  root is for administration; $username is for desktop, games, and launchers."
 echo
 lsblk "$disk"
 echo
@@ -118,9 +124,13 @@ mount --mkdir "$efi_part" /mnt/boot
 
 pacstrap -K /mnt \
   base linux linux-firmware \
-  networkmanager sudo vim nano \
+  networkmanager sudo vim nano pciutils \
+  alsa-utils sof-firmware \
+  pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
-  mesa intel-ucode amd-ucode
+  plasma-pa plasma-workspace xorg-server xorg-xwayland \
+  mesa mesa-utils vulkan-icd-loader vulkan-intel vulkan-radeon vulkan-tools \
+  intel-ucode amd-ucode
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
@@ -165,3 +175,4 @@ EOF
 
 umount -R /mnt
 echo "Install complete. Reboot and remove the USB drive."
+echo "Use $username for normal work, games, and launchers. Use root only for administration."
