@@ -124,6 +124,12 @@ class Launcher(tk.Tk):
         ttk.Button(right, text="Remove Game", command=self.remove_game).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Logs", command=self.show_logs).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Refresh", command=self.refresh_games).pack(fill=tk.X, pady=(16, 8))
+        ttk.Button(right, text="Exit Session", command=self.exit_session).pack(fill=tk.X, pady=(24, 8))
+        ttk.Button(right, text="Reboot", command=self.reboot_system).pack(fill=tk.X, pady=(0, 8))
+        ttk.Button(right, text="Shutdown", command=self.shutdown_system).pack(fill=tk.X, pady=(0, 8))
+
+        self.bind_all("<Control-Alt-BackSpace>", lambda _event: self.exit_session())
+        self.bind_all("<Control-Alt-b>", lambda _event: self.exit_session())
 
     def refresh_games(self):
         self.games = []
@@ -378,6 +384,18 @@ class Launcher(tk.Tk):
         shutil.rmtree(game.dir)
         self.selected_index = None
         self.refresh_games()
+
+    def exit_session(self):
+        if messagebox.askyesno("Exit Session", "Close the launcher and return to the login screen?"):
+            self.destroy()
+
+    def reboot_system(self):
+        if messagebox.askyesno("Reboot", "Reboot the PC now?"):
+            subprocess.Popen(["systemctl", "reboot"])
+
+    def shutdown_system(self):
+        if messagebox.askyesno("Shutdown", "Shut down the PC now?"):
+            subprocess.Popen(["systemctl", "poweroff"])
 
     def _show_error(self, title, message):
         messagebox.showerror(title, message)

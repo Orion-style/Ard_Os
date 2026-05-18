@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Ard Gaming Mode
+Comment=Start Ard Launcher inside a Gamescope gaming session
+Exec=/usr/local/bin/ard-gaming-session
+TryExec=/usr/local/bin/ard-gaming-session
+Type=Application
+DesktopNames=ARD-Gaming

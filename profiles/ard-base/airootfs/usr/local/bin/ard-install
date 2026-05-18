@@ -141,10 +141,13 @@ genfstab -U /mnt >> /mnt/etc/fstab
 install -Dm755 /usr/local/bin/ard-create-game /mnt/usr/local/bin/ard-create-game
 install -Dm755 /usr/local/bin/ard-run-game /mnt/usr/local/bin/ard-run-game
 install -Dm755 /usr/local/bin/ard-launcher /mnt/usr/local/bin/ard-launcher
+install -Dm755 /usr/local/bin/ard-gaming-session /mnt/usr/local/bin/ard-gaming-session
 install -Dm755 /usr/local/bin/ard-install-gpu-drivers /mnt/usr/local/bin/ard-install-gpu-drivers
 install -Dm755 /usr/local/bin/ard-install-gaming-compat /mnt/usr/local/bin/ard-install-gaming-compat
 install -Dm755 /opt/ard-os/launcher/ard-launcher.py /mnt/opt/ard-os/launcher/ard-launcher.py
 install -Dm644 /usr/share/applications/ard-launcher.desktop /mnt/usr/share/applications/ard-launcher.desktop
+install -Dm644 /usr/share/xsessions/ard-gaming.desktop /mnt/usr/share/xsessions/ard-gaming.desktop
+install -Dm644 /usr/share/xsessions/ard-desktop.desktop /mnt/usr/share/xsessions/ard-desktop.desktop
 
 arch-chroot /mnt /bin/bash <<EOF
 set -euo pipefail

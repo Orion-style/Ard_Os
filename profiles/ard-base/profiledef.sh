@@ -22,5 +22,6 @@ file_permissions=(
   ["/usr/local/bin/ard-create-game"]="0:0:755"
   ["/usr/local/bin/ard-run-game"]="0:0:755"
   ["/usr/local/bin/ard-launcher"]="0:0:755"
+  ["/usr/local/bin/ard-gaming-session"]="0:0:755"
   ["/opt/ard-os/launcher/ard-launcher.py"]="0:0:755"
 )

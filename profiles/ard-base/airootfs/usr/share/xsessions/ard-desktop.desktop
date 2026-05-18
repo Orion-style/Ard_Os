@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Ard Desktop Mode
+Comment=Start a normal KDE Plasma desktop
+Exec=startplasma-x11
+TryExec=startplasma-x11
+Type=Application
+DesktopNames=KDE

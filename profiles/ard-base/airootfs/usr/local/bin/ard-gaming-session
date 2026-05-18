@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Gaming Mode must not run as root." >&2
+  exit 1
+fi
+
+log_dir="${XDG_STATE_HOME:-$HOME/.local/state}/ard-os"
+mkdir -p "$log_dir"
+log_file="$log_dir/gaming-session.log"
+
+export XDG_CURRENT_DESKTOP=ARD-Gaming
+export DESKTOP_SESSION=ard-gaming
+
+echo "Starting Ard Gaming Mode." > "$log_file"
+echo "Emergency exit: Ctrl+Alt+Backspace or Ctrl+Alt+B closes the launcher session." >> "$log_file"
+
+if command -v gamescope >/dev/null 2>&1; then
+  exec gamescope -f -- ard-launcher >> "$log_file" 2>&1
+fi
+
+echo "gamescope is not installed; starting launcher without Gamescope." >> "$log_file"
+exec ard-launcher >> "$log_file" 2>&1

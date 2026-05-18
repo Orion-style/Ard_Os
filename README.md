@@ -26,6 +26,7 @@ Reasons:
 - `docs/gaming-os-structure-checklist.md`: Stage 7 game folder, prefix, config, and log structure.
 - `docs/game-launcher-checklist.md`: Stage 8 launcher validation.
 - `docs/game-profiles-checklist.md`: Stage 9 per-game launch profile validation.
+- `docs/gaming-mode-checklist.md`: Stage 10 Gaming Mode session validation.
 
 ## Build Requirements
 
@@ -203,6 +204,18 @@ Stage 9 makes each game's launch method configurable in its own `config.json`. P
 
 Settings remain per game. Do not use one global profile for all games, and do not edit launcher code just to change one game's launch method.
 
+## Gaming Mode
+
+Stage 10 adds a separate login session:
+
+```text
+login manager -> gamescope session -> launcher -> game
+```
+
+SDDM shows `Ard Desktop Mode` for the normal KDE Plasma desktop and `Ard Gaming Mode` for the launcher-first session. Gaming Mode runs `ard-gaming-session`, which starts `gamescope -f -- ard-launcher`.
+
+The launcher includes Exit Session, Reboot, and Shutdown buttons. Emergency exit shortcuts are `Ctrl+Alt+Backspace` and `Ctrl+Alt+B`.
+
 ## Current Scope
 
 Included:
@@ -223,6 +236,7 @@ Included:
 - structured game directories, per-game configs, prefixes, and logs
 - graphical game launcher
 - per-game launch profiles
+- Gaming Mode login session
 - Firefox
 - Installer script for UEFI systems
 
