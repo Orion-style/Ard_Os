@@ -31,6 +31,7 @@ exe="$(jq -r '.exe // empty' "$config")"
 prefix="$(jq -r '.prefix // empty' "$config")"
 runner="$(jq -r '.runner // "wine"' "$config")"
 args="$(jq -r '.args // ""' "$config")"
+custom_runner="$(jq -r '.custom_runner // ""' "$config")"
 game_dir="$(dirname "$config")"
 log_dir="$game_dir/logs"
 log_file="$log_dir/last-launch.log"
@@ -47,23 +48,86 @@ fi
 
 mkdir -p "$prefix" "$log_dir"
 
+runner_args=()
+while IFS= read -r launch_arg; do
+  runner_args+=("$launch_arg")
+done < <(jq -r '.launch_args[]? // empty' "$config")
+if [[ "${#runner_args[@]}" -eq 0 && -n "$args" ]]; then
+  read -r -a runner_args <<< "$args"
+fi
+
+env_file="$(mktemp)"
+jq -r '(.env // {}) | to_entries[] | @tsv' "$config" > "$env_file"
+while IFS="$(printf '\t')" read -r key value; do
+  if [[ -n "$key" ]]; then
+    export "$key=$value"
+  fi
+done < "$env_file"
+rm -f "$env_file"
+export WINEPREFIX="$prefix"
+
+if [[ "$(jq -r '.mangohud.enabled // false' "$config")" == "true" ]]; then
+  export MANGOHUD=1
+  mangohud_prefix=(mangohud)
+else
+  export MANGOHUD="${MANGOHUD:-0}"
+  mangohud_prefix=()
+fi
+
+gamescope_prefix=()
+if [[ "$(jq -r '.gamescope.enabled // false' "$config")" == "true" ]]; then
+  gamescope_prefix=(gamescope)
+  width="$(jq -r '.gamescope.width // empty' "$config")"
+  height="$(jq -r '.gamescope.height // empty' "$config")"
+  fps_limit="$(jq -r '.gamescope.fps_limit // empty' "$config")"
+  scaling="$(jq -r '.gamescope.scaling // empty' "$config")"
+  fullscreen="$(jq -r '.gamescope.fullscreen // false' "$config")"
+  [[ -n "$width" ]] && gamescope_prefix+=(-W "$width")
+  [[ -n "$height" ]] && gamescope_prefix+=(-H "$height")
+  [[ -n "$fps_limit" ]] && gamescope_prefix+=(-r "$fps_limit")
+  [[ "$fullscreen" == "true" ]] && gamescope_prefix+=(-f)
+  [[ -n "$scaling" ]] && gamescope_prefix+=(-S "$scaling")
+  gamescope_prefix+=(--)
+fi
+
 case "$runner" in
   wine)
     echo "Launching ${name:-$exe} with Wine." | tee "$log_file"
-    runner_args=()
-    if [[ -n "$args" ]]; then
-      read -r -a runner_args <<< "$args"
-    fi
-    if WINEPREFIX="$prefix" wine "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
+    if "${gamescope_prefix[@]}" "${mangohud_prefix[@]}" wine "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
       exit 0
     fi
     cp "$log_file" "$log_dir/crash.log"
     exit 1
     ;;
   proton)
-    echo "Runner 'proton' should be launched through Steam at this stage." | tee "$log_file"
-    echo "Use Steam-managed Proton first, or change runner to wine for manual config testing." | tee -a "$log_file"
-    exit 2
+    proton_runner="${custom_runner:-proton}"
+    echo "Launching ${name:-$exe} with Proton." | tee "$log_file"
+    if "${gamescope_prefix[@]}" "${mangohud_prefix[@]}" "$proton_runner" run "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
+      exit 0
+    fi
+    cp "$log_file" "$log_dir/crash.log"
+    exit 1
+    ;;
+  proton-experimental)
+    proton_runner="${custom_runner:-proton}"
+    echo "Launching ${name:-$exe} with Proton Experimental." | tee "$log_file"
+    if "${gamescope_prefix[@]}" "${mangohud_prefix[@]}" "$proton_runner" run "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
+      exit 0
+    fi
+    cp "$log_file" "$log_dir/crash.log"
+    exit 1
+    ;;
+  custom)
+    if [[ -z "$custom_runner" ]]; then
+      echo "custom_runner is required for custom runner." | tee "$log_file"
+      exit 2
+    fi
+    read -r -a custom_parts <<< "$custom_runner"
+    if "${gamescope_prefix[@]}" "${mangohud_prefix[@]}" "${custom_parts[@]}" "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
+      exit 0
+    fi
+    cp "$log_file" "$log_dir/crash.log"
+    exit 1
     ;;
   *)
     echo "Unsupported runner: $runner" >&2

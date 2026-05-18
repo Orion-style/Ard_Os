@@ -90,7 +90,34 @@ jq -n \
   --arg prefix "$prefix_dir" \
   --arg runner "$runner" \
   --arg args "$args" \
-  '{name: $name, exe: $exe, prefix: $prefix, runner: $runner, args: $args}' \
+  '{
+    name: $name,
+    exe: $exe,
+    prefix: $prefix,
+    runner: $runner,
+    custom_runner: "",
+    env: {
+      MANGOHUD: "0",
+      WINEPREFIX: $prefix,
+      DXVK_HUD: "0"
+    },
+    launch_args: (if $args == "" then [] else ($args | split(" ")) end),
+    args: $args,
+    gamescope: {
+      enabled: false,
+      width: 1920,
+      height: 1080,
+      fullscreen: true,
+      fps_limit: 60,
+      scaling: "fit"
+    },
+    mangohud: {
+      enabled: false,
+      show_fps: true,
+      show_temperature: false,
+      show_frametime: false
+    }
+  }' \
   > "$config_file"
 
 echo "Created game structure: $game_dir"

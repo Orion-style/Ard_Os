@@ -25,6 +25,7 @@ Reasons:
 - `docs/gaming-compatibility-checklist.md`: Stage 6 Wine and Windows compatibility validation.
 - `docs/gaming-os-structure-checklist.md`: Stage 7 game folder, prefix, config, and log structure.
 - `docs/game-launcher-checklist.md`: Stage 8 launcher validation.
+- `docs/game-profiles-checklist.md`: Stage 9 per-game launch profile validation.
 
 ## Build Requirements
 
@@ -196,6 +197,12 @@ The launcher scans `/games/*/config.json`, lists games, launches through the con
 
 Stage 8 passes when the launcher opens, games appear in the list, Play launches a game, errors are visible in the interface, logs are saved, and at least 2-3 different programs can start from configs.
 
+## Game Profiles
+
+Stage 9 makes each game's launch method configurable in its own `config.json`. Profiles support Wine, Proton, Proton Experimental, custom runners, per-game environment variables, launch arguments, Gamescope settings, and MangoHud toggles.
+
+Settings remain per game. Do not use one global profile for all games, and do not edit launcher code just to change one game's launch method.
+
 ## Current Scope
 
 Included:
@@ -215,6 +222,7 @@ Included:
 - Steam, Proton path, DXVK/VKD3D validation, and gaming helper tools
 - structured game directories, per-game configs, prefixes, and logs
 - graphical game launcher
+- per-game launch profiles
 - Firefox
 - Installer script for UEFI systems
 

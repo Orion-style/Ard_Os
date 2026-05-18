@@ -47,7 +47,28 @@ Required config shape:
   "exe": "/games/GameName/game.exe",
   "prefix": "/games/GameName/prefix",
   "runner": "wine",
-  "args": ""
+  "custom_runner": "",
+  "env": {
+    "MANGOHUD": "0",
+    "WINEPREFIX": "/games/GameName/prefix",
+    "DXVK_HUD": "0"
+  },
+  "launch_args": [],
+  "args": "",
+  "gamescope": {
+    "enabled": false,
+    "width": 1920,
+    "height": 1080,
+    "fullscreen": true,
+    "fps_limit": 60,
+    "scaling": "fit"
+  },
+  "mangohud": {
+    "enabled": false,
+    "show_fps": true,
+    "show_temperature": false,
+    "show_frametime": false
+  }
 }
 ```
 
@@ -62,12 +83,16 @@ The launcher builds a launch command from the game config:
 - Launches the game.
 - Saves the log.
 
-Supported runner behavior in this stage:
+Supported runner behavior:
 
 - `wine`: launches directly with `WINEPREFIX` set to the game's prefix.
-- `proton`: accepted in config, but Steam-managed Proton remains the preferred Proton path until a standalone Proton runner is explicitly installed.
+- `proton`: launches with a standalone Proton command or `custom_runner`.
+- `proton-experimental`: launches with a standalone Proton command or `custom_runner`.
+- `custom`: launches with the command from `custom_runner`.
 
 Each game must launch from its own prefix.
+
+The Settings button edits per-game profile fields including runner, custom runner, environment variables, launch arguments, Gamescope settings, and MangoHud settings.
 
 ## 8.4 Show Errors
 
