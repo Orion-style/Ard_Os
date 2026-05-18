@@ -23,6 +23,7 @@ Reasons:
 - `scripts/test-qemu.sh`: QEMU boot test helper.
 - `docs/graphics-drivers-checklist.md`: Stage 5 graphics and driver validation.
 - `docs/gaming-compatibility-checklist.md`: Stage 6 Wine and Windows compatibility validation.
+- `docs/gaming-os-structure-checklist.md`: Stage 7 game folder, prefix, config, and log structure.
 
 ## Build Requirements
 
@@ -162,6 +163,26 @@ DirectX 12 -> VKD3D-Proton -> Vulkan
 
 Stage 6 passes when `.exe` files start, a Wine prefix is created, Steam starts, a simple Windows game starts through Wine or Proton, and MangoHud can show FPS. Do not bypass anti-cheat; anti-cheat failure is a compatibility limitation.
 
+## Gaming OS Structure
+
+Stage 7 separates OS files from game files:
+
+```text
+/opt/ard-os/       OS programs
+/games/            installed games and per-game runtime data
+/var/log/ard-os/   OS logs
+/home/user/        user files
+```
+
+Each game gets its own folder, Wine prefix, `config.json`, and logs:
+
+```bash
+ard-create-game --id GameName --name "Game Name" --exe /games/GameName/game.exe
+ard-run-game /games/GameName/config.json
+```
+
+Do not store games in system folders, do not run games as root, do not use one Wine prefix for all games, and do not mix logs between games.
+
 ## Current Scope
 
 Included:
@@ -179,6 +200,7 @@ Included:
 - AMD/Intel Mesa and Vulkan driver packages
 - Wine base compatibility packages
 - Steam, Proton path, DXVK/VKD3D validation, and gaming helper tools
+- structured game directories, per-game configs, prefixes, and logs
 - Firefox
 - Installer script for UEFI systems
 

@@ -18,6 +18,7 @@ gptfdisk
 grub
 intel-ucode
 iwd
+jq
 konsole
 lib32-gamemode
 lib32-mangohud

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-run-game /games/GameName/config.json
+
+Runs a game from its config.json. Run as the normal user, not root.
+EOF
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+config="${1:-}"
+if [[ -z "$config" || ! -f "$config" ]]; then
+  usage >&2
+  exit 2
+fi
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Do not run games as root." >&2
+  exit 1
+fi
+
+name="$(jq -r '.name // empty' "$config")"
+exe="$(jq -r '.exe // empty' "$config")"
+prefix="$(jq -r '.prefix // empty' "$config")"
+runner="$(jq -r '.runner // "wine"' "$config")"
+args="$(jq -r '.args // ""' "$config")"
+game_dir="$(dirname "$config")"
+log_dir="$game_dir/logs"
+log_file="$log_dir/last-launch.log"
+
+if [[ -z "$exe" || -z "$prefix" ]]; then
+  echo "Config must contain exe and prefix." >&2
+  exit 2
+fi
+
+if [[ ! -f "$exe" ]]; then
+  echo "Configured executable does not exist: $exe" >&2
+  exit 1
+fi
+
+mkdir -p "$prefix" "$log_dir"
+
+case "$runner" in
+  wine)
+    echo "Launching ${name:-$exe} with Wine." | tee "$log_file"
+    runner_args=()
+    if [[ -n "$args" ]]; then
+      read -r -a runner_args <<< "$args"
+    fi
+    if WINEPREFIX="$prefix" wine "$exe" "${runner_args[@]}" 2>&1 | tee -a "$log_file"; then
+      exit 0
+    fi
+    cp "$log_file" "$log_dir/crash.log"
+    exit 1
+    ;;
+  proton)
+    echo "Runner 'proton' should be launched through Steam at this stage." | tee "$log_file"
+    echo "Use Steam-managed Proton first, or change runner to wine for manual config testing." | tee -a "$log_file"
+    exit 2
+    ;;
+  *)
+    echo "Unsupported runner: $runner" >&2
+    exit 2
+    ;;
+esac

@@ -7,6 +7,10 @@ systemctl enable sddm.service
 useradd -m -G wheel -s /bin/bash ard
 passwd -d ard
 
+install -d -m 0755 /opt/ard-os
+install -d -m 0775 -o ard -g wheel /games
+install -d -m 0755 /var/log/ard-os
+
 printf 'ard ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/10-ard-live
 chmod 0440 /etc/sudoers.d/10-ard-live
 

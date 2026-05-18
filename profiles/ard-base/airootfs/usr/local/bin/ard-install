@@ -124,7 +124,7 @@ mount --mkdir "$efi_part" /mnt/boot
 
 pacstrap -K /mnt \
   base linux linux-firmware \
-  networkmanager sudo vim nano pciutils \
+  networkmanager sudo vim nano pciutils jq \
   alsa-utils sof-firmware \
   pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
@@ -169,6 +169,9 @@ ENTRY
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
 useradd -m -G wheel -s /bin/bash "$username"
+install -d -m 0755 /opt/ard-os
+install -d -m 0775 -o "$username" -g wheel /games
+install -d -m 0755 /var/log/ard-os
 printf 'Set password for $username:\n'
 passwd "$username"
 printf 'Set password for root:\n'

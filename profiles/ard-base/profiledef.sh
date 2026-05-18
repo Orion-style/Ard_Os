@@ -19,4 +19,6 @@ file_permissions=(
   ["/usr/local/bin/ard-install"]="0:0:755"
   ["/usr/local/bin/ard-install-gpu-drivers"]="0:0:755"
   ["/usr/local/bin/ard-install-gaming-compat"]="0:0:755"
+  ["/usr/local/bin/ard-create-game"]="0:0:755"
+  ["/usr/local/bin/ard-run-game"]="0:0:755"
 )

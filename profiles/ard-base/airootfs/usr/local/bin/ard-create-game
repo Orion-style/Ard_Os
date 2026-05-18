@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-create-game --id GameName --name "Game Name" --exe /games/GameName/game.exe [--runner wine] [--args "..."]
+
+Creates:
+  /games/GameName/
+  /games/GameName/prefix/
+  /games/GameName/logs/
+  /games/GameName/config.json
+
+Run as the normal user, not root.
+EOF
+}
+
+game_id=""
+game_name=""
+game_exe=""
+runner="wine"
+args=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --id)
+      game_id="${2:-}"
+      shift 2
+      ;;
+    --name)
+      game_name="${2:-}"
+      shift 2
+      ;;
+    --exe)
+      game_exe="${2:-}"
+      shift 2
+      ;;
+    --runner)
+      runner="${2:-}"
+      shift 2
+      ;;
+    --args)
+      args="${2:-}"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Do not create or run games as root." >&2
+  exit 1
+fi
+
+if [[ -z "$game_id" || ! "$game_id" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "--id is required and may contain only letters, numbers, dot, underscore, and hyphen." >&2
+  exit 2
+fi
+
+if [[ -z "$game_name" ]]; then
+  game_name="$game_id"
+fi
+
+game_dir="/games/$game_id"
+prefix_dir="$game_dir/prefix"
+logs_dir="$game_dir/logs"
+config_file="$game_dir/config.json"
+
+if [[ -e "$game_dir" ]]; then
+  echo "Game directory already exists: $game_dir" >&2
+  exit 1
+fi
+
+mkdir -p "$prefix_dir" "$logs_dir"
+: > "$logs_dir/last-launch.log"
+: > "$logs_dir/crash.log"
+
+jq -n \
+  --arg name "$game_name" \
+  --arg exe "${game_exe:-$game_dir/game.exe}" \
+  --arg prefix "$prefix_dir" \
+  --arg runner "$runner" \
+  --arg args "$args" \
+  '{name: $name, exe: $exe, prefix: $prefix, runner: $runner, args: $args}' \
+  > "$config_file"
+
+echo "Created game structure: $game_dir"
+echo "Edit $config_file before launching if the executable path is different."
