@@ -34,6 +34,9 @@ Terminal=false
 Categories=System;
 EOF
 chmod 0755 /home/ard/Desktop/ard-install.desktop
+
+cp /usr/share/applications/ard-launcher.desktop /home/ard/Desktop/ard-launcher.desktop
+chmod 0755 /home/ard/Desktop/ard-launcher.desktop
 chown -R ard:ard /home/ard
 
 printf 'ard-live\n' > /etc/hostname

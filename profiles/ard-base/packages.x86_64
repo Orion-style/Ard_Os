@@ -48,11 +48,13 @@ plasma-desktop
 plasma-nm
 plasma-pa
 plasma-workspace
+python
 sddm
 sof-firmware
 steam
 sudo
 systemd-resolvconf
+tk
 vim
 vulkan-icd-loader
 vulkan-intel

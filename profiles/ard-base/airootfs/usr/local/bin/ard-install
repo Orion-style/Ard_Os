@@ -129,6 +129,7 @@ pacstrap -K /mnt \
   pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
   plasma-pa plasma-workspace xorg-server xorg-xwayland \
+  python tk \
   mesa mesa-utils lib32-mesa vulkan-icd-loader lib32-vulkan-icd-loader \
   vulkan-intel vulkan-radeon lib32-vulkan-intel lib32-vulkan-radeon vulkan-tools \
   wine wine-gecko wine-mono winetricks steam \
@@ -136,6 +137,14 @@ pacstrap -K /mnt \
   intel-ucode amd-ucode
 
 genfstab -U /mnt >> /mnt/etc/fstab
+
+install -Dm755 /usr/local/bin/ard-create-game /mnt/usr/local/bin/ard-create-game
+install -Dm755 /usr/local/bin/ard-run-game /mnt/usr/local/bin/ard-run-game
+install -Dm755 /usr/local/bin/ard-launcher /mnt/usr/local/bin/ard-launcher
+install -Dm755 /usr/local/bin/ard-install-gpu-drivers /mnt/usr/local/bin/ard-install-gpu-drivers
+install -Dm755 /usr/local/bin/ard-install-gaming-compat /mnt/usr/local/bin/ard-install-gaming-compat
+install -Dm755 /opt/ard-os/launcher/ard-launcher.py /mnt/opt/ard-os/launcher/ard-launcher.py
+install -Dm644 /usr/share/applications/ard-launcher.desktop /mnt/usr/share/applications/ard-launcher.desktop
 
 arch-chroot /mnt /bin/bash <<EOF
 set -euo pipefail

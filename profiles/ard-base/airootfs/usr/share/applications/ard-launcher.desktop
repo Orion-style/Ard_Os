@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ard Launcher
+Comment=Launch games from Ard OS game configs
+Exec=ard-launcher
+Icon=applications-games
+Terminal=false
+Categories=Game;

@@ -24,6 +24,7 @@ Reasons:
 - `docs/graphics-drivers-checklist.md`: Stage 5 graphics and driver validation.
 - `docs/gaming-compatibility-checklist.md`: Stage 6 Wine and Windows compatibility validation.
 - `docs/gaming-os-structure-checklist.md`: Stage 7 game folder, prefix, config, and log structure.
+- `docs/game-launcher-checklist.md`: Stage 8 launcher validation.
 
 ## Build Requirements
 
@@ -183,6 +184,18 @@ ard-run-game /games/GameName/config.json
 
 Do not store games in system folders, do not run games as root, do not use one Wine prefix for all games, and do not mix logs between games.
 
+## Game Launcher
+
+Stage 8 adds the main launcher interface:
+
+```bash
+ard-launcher
+```
+
+The launcher scans `/games/*/config.json`, lists games, launches through the configured runner, writes logs, and shows specific errors such as missing executables, missing prefixes, missing runners, permission problems, and Wine launch failures.
+
+Stage 8 passes when the launcher opens, games appear in the list, Play launches a game, errors are visible in the interface, logs are saved, and at least 2-3 different programs can start from configs.
+
 ## Current Scope
 
 Included:
@@ -201,14 +214,12 @@ Included:
 - Wine base compatibility packages
 - Steam, Proton path, DXVK/VKD3D validation, and gaming helper tools
 - structured game directories, per-game configs, prefixes, and logs
+- graphical game launcher
 - Firefox
 - Installer script for UEFI systems
 
 Deferred:
 
-- Proton
-- Steam or game launcher
-- custom launcher
 - GPU vendor tuning
 - Ard OS theme and branding
 - Secure Boot signing
