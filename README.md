@@ -153,6 +153,15 @@ sudo ard-install-gaming-compat
 
 Run Wine as the normal user, not root. Do not continue to Proton, DXVK, VKD3D, or launchers until `wine --version`, `wineboot --init`, and `winecfg` work.
 
+Steam is the first Proton path. Proton supplies the gaming Wine runtime plus DXVK for DirectX 9/10/11 and VKD3D-Proton for DirectX 12:
+
+```text
+DirectX 11 -> DXVK -> Vulkan
+DirectX 12 -> VKD3D-Proton -> Vulkan
+```
+
+Stage 6 passes when `.exe` files start, a Wine prefix is created, Steam starts, a simple Windows game starts through Wine or Proton, and MangoHud can show FPS. Do not bypass anti-cheat; anti-cheat failure is a compatibility limitation.
+
 ## Current Scope
 
 Included:
@@ -169,6 +178,7 @@ Included:
 - GPU identification tools
 - AMD/Intel Mesa and Vulkan driver packages
 - Wine base compatibility packages
+- Steam, Proton path, DXVK/VKD3D validation, and gaming helper tools
 - Firefox
 - Installer script for UEFI systems
 

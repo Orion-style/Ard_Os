@@ -8,9 +8,13 @@ Usage:
 
 Installs the Stage 6 base Windows compatibility layer:
   wine
+  steam
   wine-gecko
   wine-mono
   winetricks
+  MangoHud
+  GameMode
+  Gamescope
 
 Run this only after Stage 5 graphics checks pass.
 EOF
@@ -32,6 +36,9 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
-pacman -Syu --needed wine wine-gecko wine-mono winetricks
+pacman -Syu --needed \
+  wine wine-gecko wine-mono winetricks steam \
+  vkd3d lib32-vkd3d mangohud lib32-mangohud gamemode lib32-gamemode gamescope
 
-echo "Gaming compatibility base installed. Run Wine as a normal user, not root."
+echo "Gaming compatibility base installed."
+echo "Run Wine, Steam, Proton, DXVK, VKD3D, and launchers as a normal user, not root."

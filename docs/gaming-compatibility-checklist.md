@@ -34,6 +34,10 @@ Package roles:
 - `wine-gecko`: browser engine replacement used by Wine applications.
 - `wine-mono`: .NET Framework replacement used by Wine applications.
 - `winetricks`: helper for installing common Windows runtime components into Wine prefixes.
+- `steam`: first supported path for Proton-managed games.
+- `mangohud`: FPS and hardware overlay.
+- `gamemode`: per-game performance optimization daemon and launcher.
+- `gamescope`: nested compositor for isolated game sessions.
 
 Validation commands:
 
@@ -57,3 +61,143 @@ Pass criteria:
 - No Wine process runs as root.
 
 Do not move to Proton, DXVK, VKD3D, or launcher work until plain Wine starts correctly.
+
+## 6.2 Install Proton
+
+Proton is a gaming-oriented version of Wine and usually works better for games.
+
+Use Proton through Steam first:
+
+```bash
+steam
+```
+
+In Steam, enable Steam Play for supported titles and, when needed, for all other titles. Steam manages official Proton downloads inside the user's Steam library.
+
+Standalone Proton can be added later through a managed compatibility-tools directory, but do not make it the first path. Start with Steam-managed Proton because it keeps the game runtime, Proton version, DXVK, and VKD3D-Proton together.
+
+Validation:
+
+- Steam starts as the normal user.
+- Steam Play can be enabled.
+- At least one Proton version appears in Steam compatibility settings after Steam downloads it.
+- No Steam or Proton process runs as root.
+
+## 6.3 Install DXVK
+
+DXVK is needed for DirectX 9/10/11 games.
+
+```text
+DirectX 11 -> DXVK -> Vulkan
+```
+
+For Steam games, use Proton. Proton includes DXVK for DirectX 9/10/11 translation.
+
+For a standalone Wine prefix, install DXVK into that prefix only after plain Wine works:
+
+```bash
+WINEPREFIX="$HOME/.wine-ard-test" wineboot --init
+WINEPREFIX="$HOME/.wine-ard-test" winetricks dxvk
+```
+
+Validation:
+
+- Vulkan already passes `vulkaninfo --summary`.
+- The Wine prefix is owned by the normal user.
+- A DirectX 9/10/11 test game starts through Proton or the DXVK-enabled Wine prefix.
+
+## 6.4 Install VKD3D-Proton
+
+VKD3D-Proton is needed for DirectX 12 games.
+
+```text
+DirectX 12 -> VKD3D-Proton -> Vulkan
+```
+
+For Steam games, use Proton. Proton includes VKD3D-Proton for DirectX 12 translation.
+
+For standalone Wine testing, keep this separate from the first simple Wine prefix. DirectX 12 compatibility depends heavily on GPU driver quality and Vulkan support.
+
+Validation:
+
+- Vulkan works on the real GPU.
+- Proton starts a DirectX 12 test game, or the selected Wine prefix has an explicitly installed VKD3D/VKD3D-Proton setup.
+- Any failure is recorded with the Wine prefix path, GPU driver, Vulkan result, and game name.
+
+## 6.5 Install Helper Tools
+
+Required tools:
+
+- `winetricks`
+- `mangohud`
+- `gamemode`
+- `gamescope`
+
+Purpose:
+
+- `winetricks`: installs Windows libraries into Wine prefixes.
+- `mangohud`: shows FPS and hardware load.
+- `gamemode`: optimizes the system while gaming.
+- `gamescope`: creates a separate gaming session.
+
+Install or refresh them:
+
+```bash
+sudo pacman -Syu --needed winetricks mangohud lib32-mangohud gamemode lib32-gamemode gamescope
+```
+
+The repository helper installs the full Stage 6 base package set:
+
+```bash
+sudo ard-install-gaming-compat
+```
+
+Validation commands:
+
+```bash
+winetricks --version
+mangohud --version
+gamemoded -t
+gamescope --version
+```
+
+MangoHud test:
+
+```bash
+mangohud glxgears
+```
+
+GameMode test with a command:
+
+```bash
+gamemoderun glxgears
+```
+
+Gamescope smoke test:
+
+```bash
+gamescope -- glxgears
+```
+
+## Stage 6 Result
+
+At the end of Stage 6:
+
+- `.exe` files start.
+- A Wine prefix is created.
+- Steam starts.
+- A simple Windows game starts.
+- MangoHud shows FPS.
+
+Pay attention to:
+
+- Wrong Wine prefix.
+- Missing Vulkan support.
+- Missing DXVK.
+- Missing Windows libraries.
+- Games that require anti-cheat.
+- Games that require a specific Windows API version.
+
+Do not try to bypass anti-cheat. If a game does not start because of anti-cheat, treat it as a compatibility limitation.
+
+Move to Stage 7 only when at least one Windows game starts through Wine or Proton.
