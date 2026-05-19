@@ -122,6 +122,7 @@ class Launcher(tk.Tk):
         self.play_button.pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Settings", command=self.show_settings).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Settings Center", command=self.open_settings_center).pack(fill=tk.X, pady=(0, 8))
+        ttk.Button(right, text="Check System", command=self.open_diagnostics).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Add Game", command=self.add_game).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Remove Game", command=self.remove_game).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Logs", command=self.show_logs).pack(fill=tk.X, pady=(0, 8))
@@ -328,6 +329,12 @@ class Launcher(tk.Tk):
             subprocess.Popen(["python3", "/opt/ard-os/settings/ard-settings-center.py"])
         except OSError as exc:
             self._show_error("Settings Center", f"Could not open Settings Center: {exc}")
+
+    def open_diagnostics(self):
+        try:
+            subprocess.Popen(["python3", "/opt/ard-os/diagnostics/ard-diagnostics.py"])
+        except OSError as exc:
+            self._show_error("Diagnostics", f"Could not open diagnostics: {exc}")
 
     def show_logs(self):
         game = self.selected_game()

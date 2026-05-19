@@ -193,6 +193,7 @@ class SettingsCenter(tk.Tk):
         actions.pack(anchor=tk.W)
         ttk.Button(actions, text="Update System", command=self.update_system).pack(side=tk.LEFT)
         ttk.Button(actions, text="View Logs", command=self.view_logs).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(actions, text="Check System", command=self.open_diagnostics).pack(side=tk.LEFT, padx=(8, 0))
         ttk.Button(actions, text="Reboot", command=self.reboot_system).pack(side=tk.LEFT, padx=(8, 0))
         ttk.Button(actions, text="Shutdown", command=self.shutdown_system).pack(side=tk.LEFT, padx=(8, 0))
 
@@ -387,6 +388,12 @@ class SettingsCenter(tk.Tk):
         command = ["journalctl", "-b", "-n", "300", "--no-pager"]
         text, error = command_text(command, timeout=10)
         self._text_window("System Logs", text or error or "No logs returned.")
+
+    def open_diagnostics(self):
+        try:
+            subprocess.Popen(["python3", "/opt/ard-os/diagnostics/ard-diagnostics.py"])
+        except OSError as exc:
+            self._error("Diagnostics", f"Could not open diagnostics: {exc}")
 
     def reboot_system(self):
         if messagebox.askyesno("Reboot", "Reboot the PC now?", parent=self):

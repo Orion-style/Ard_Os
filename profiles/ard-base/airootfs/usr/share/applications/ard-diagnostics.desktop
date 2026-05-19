@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ard Diagnostics
+Comment=Check Ard OS gaming compatibility and create a safe report
+Exec=ard-check-system
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Utility;

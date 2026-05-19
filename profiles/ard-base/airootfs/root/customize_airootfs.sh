@@ -5,7 +5,8 @@ systemctl enable NetworkManager.service
 systemctl enable sddm.service
 systemctl enable power-profiles-daemon.service || true
 
-chmod 0755 /usr/local/bin/ard-settings-center /opt/ard-os/settings/ard-settings-center.py
+chmod 0755 /usr/local/bin/ard-settings-center /usr/local/bin/ard-check-system
+chmod 0755 /opt/ard-os/settings/ard-settings-center.py /opt/ard-os/diagnostics/ard-diagnostics.py
 
 useradd -m -G wheel -s /bin/bash ard
 passwd -d ard
@@ -40,8 +41,10 @@ chmod 0755 /home/ard/Desktop/ard-install.desktop
 
 cp /usr/share/applications/ard-launcher.desktop /home/ard/Desktop/ard-launcher.desktop
 cp /usr/share/applications/ard-settings-center.desktop /home/ard/Desktop/ard-settings-center.desktop
+cp /usr/share/applications/ard-diagnostics.desktop /home/ard/Desktop/ard-diagnostics.desktop
 chmod 0755 /home/ard/Desktop/ard-launcher.desktop
 chmod 0755 /home/ard/Desktop/ard-settings-center.desktop
+chmod 0755 /home/ard/Desktop/ard-diagnostics.desktop
 chown -R ard:ard /home/ard
 
 printf 'ard-live\n' > /etc/hostname

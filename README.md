@@ -28,6 +28,7 @@ Reasons:
 - `docs/game-profiles-checklist.md`: Stage 9 per-game launch profile validation.
 - `docs/gaming-mode-checklist.md`: Stage 10 Gaming Mode session validation.
 - `docs/settings-center-checklist.md`: Stage 11 Settings Center validation.
+- `docs/diagnostics-checklist.md`: Stage 12 diagnostics and report validation.
 
 ## Build Requirements
 
@@ -229,6 +230,22 @@ The Settings Center is available from the desktop and from the launcher. It cove
 
 Normal users should not need terminal commands for internet, sound, display, or gaming performance basics. The interface uses system tools such as NetworkManager, PipeWire/PulseAudio, xrandr, powerprofilesctl, pacman, journalctl, and systemctl, and shows visible errors when a required tool or permission is missing.
 
+## Diagnostics
+
+Stage 12 adds a system diagnostics tool:
+
+```bash
+ard-check-system
+```
+
+The launcher and Settings Center expose the same tool through **Check System**. Pressing **Create report** writes:
+
+```text
+~/ard-diagnostics/report.txt
+```
+
+The report covers OS and kernel version, CPU, GPU and driver, Vulkan, OpenGL, Wine, Proton, DXVK, VKD3D, network reachability, disk usage, prefix sizes, and recent game launch logs. Reports are bounded and redact common password, token, authorization, and cookie fields before saving.
+
 ## Current Scope
 
 Included:
@@ -251,6 +268,7 @@ Included:
 - per-game launch profiles
 - Gaming Mode login session
 - graphical Settings Center for network, sound, display, performance, and system actions
+- diagnostics tool with safe report generation for graphics, Wine/Proton, DXVK/VKD3D, network, disk, and launch logs
 - Firefox
 - Installer script for UEFI systems
 
