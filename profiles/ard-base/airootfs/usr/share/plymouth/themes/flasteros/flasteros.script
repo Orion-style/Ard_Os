@@ -1,0 +1,34 @@
+Window.SetBackgroundTopColor(0.06, 0.09, 0.12);
+Window.SetBackgroundBottomColor(0.06, 0.09, 0.12);
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+logo.text = "FlasterOS";
+logo.image = Image.Text(logo.text, 1.0, 1.0, 1.0);
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(screen_width / 2 - logo.image.GetWidth() / 2);
+logo.sprite.SetY(screen_height / 2 - 70);
+
+message.image = Image.Text("Starting system", 0.62, 0.70, 0.74);
+message.sprite = Sprite(message.image);
+message.sprite.SetX(screen_width / 2 - message.image.GetWidth() / 2);
+message.sprite.SetY(screen_height / 2 + 10);
+
+fun refresh_callback() {
+  progress = Plymouth.GetBootProgress();
+  if (progress < 0.1) progress = 0.1;
+  if (progress > 1.0) progress = 1.0;
+  bar_width = 320;
+  bar_height = 4;
+  bar_x = screen_width / 2 - bar_width / 2;
+  bar_y = screen_height / 2 + 56;
+  box.sprite = Sprite(Image(bar_width, bar_height));
+  box.sprite.SetX(bar_x);
+  box.sprite.SetY(bar_y);
+  fill.sprite = Sprite(Image(bar_width * progress, bar_height));
+  fill.sprite.SetX(bar_x);
+  fill.sprite.SetY(bar_y);
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);

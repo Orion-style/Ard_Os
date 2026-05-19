@@ -17,7 +17,7 @@ Usage:
   ard-snapshot rollback latest|SNAPSHOT_NAME
 
 Creates btrfs system snapshots for Ard OS updates.
-Personal data in /home and game data in /games are separate subvolumes and are not rolled back.
+Personal data in /home is on a separate partition, and game data in /games is a separate subvolume. They are not rolled back.
 EOF
 }
 
@@ -87,12 +87,12 @@ write_normal_entry() {
   uuid="$(root_uuid)"
   root_subvol="${1:-@}"
   cat > "$NORMAL_ENTRY" <<ENTRY
-title Ard OS
+title FlasterOS
 linux /vmlinuz-linux
 initrd /intel-ucode.img
 initrd /amd-ucode.img
 initrd /initramfs-linux.img
-options root=UUID=$uuid rootflags=subvol=$root_subvol rw quiet
+options root=UUID=$uuid rootflags=subvol=$root_subvol rw quiet splash
 ENTRY
 }
 
@@ -101,12 +101,12 @@ write_previous_entry() {
   snapshot="$1"
   uuid="$(root_uuid)"
   cat > "$PREVIOUS_ENTRY" <<ENTRY
-title Ard OS Previous Version
+title FlasterOS Previous Version
 linux /ard-snapshots/$snapshot/vmlinuz-linux
 initrd /ard-snapshots/$snapshot/intel-ucode.img
 initrd /ard-snapshots/$snapshot/amd-ucode.img
 initrd /ard-snapshots/$snapshot/initramfs-linux.img
-options root=UUID=$uuid rootflags=subvol=$SNAPSHOT_ROOT/$snapshot rw quiet
+options root=UUID=$uuid rootflags=subvol=$SNAPSHOT_ROOT/$snapshot rw quiet splash
 ENTRY
 }
 
@@ -114,7 +114,7 @@ write_recovery_entry() {
   local uuid
   uuid="$(root_uuid)"
   cat > "$RECOVERY_ENTRY" <<ENTRY
-title Ard OS Recovery
+title FlasterOS Recovery
 linux /vmlinuz-linux
 initrd /intel-ucode.img
 initrd /amd-ucode.img
@@ -194,7 +194,7 @@ rollback_snapshot() {
   local requested snapshot broken
   requested="${1:-latest}"
   if [[ "$(root_subvolume)" == "@" ]]; then
-    echo "Boot Ard OS Previous Version before permanent rollback." >&2
+    echo "Boot FlasterOS Previous Version before permanent rollback." >&2
     exit 1
   fi
   if [[ "$requested" == "latest" ]]; then

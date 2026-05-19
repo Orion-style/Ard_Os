@@ -62,7 +62,7 @@ def command_text(command, timeout=20):
 class SettingsCenter(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Ard Settings Center")
+        self.title("FlasterOS Settings Center")
         self.geometry("980x680")
         self.minsize(860, 560)
         self.status = tk.StringVar(value="Ready")
@@ -78,9 +78,13 @@ class SettingsCenter(tk.Tk):
         root = ttk.Frame(self, padding=12)
         root.pack(fill=tk.BOTH, expand=True)
 
+        style = ttk.Style(self)
+        style.configure("Brand.TLabel", foreground="#1ec8a5", font=("TkDefaultFont", 18, "bold"))
+
         heading = ttk.Frame(root)
         heading.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(heading, text="Settings Center", font=("TkDefaultFont", 16, "bold")).pack(side=tk.LEFT)
+        ttk.Label(heading, text="FlasterOS", style="Brand.TLabel").pack(side=tk.LEFT)
+        ttk.Label(heading, text="Settings Center").pack(side=tk.LEFT, padx=(8, 0))
         ttk.Button(heading, text="Refresh", command=self.refresh_all).pack(side=tk.RIGHT)
 
         self.tabs = ttk.Notebook(root)
@@ -419,7 +423,7 @@ class SettingsCenter(tk.Tk):
             self.status.set(f"Performance settings saved to {PERFORMANCE_CONFIG}")
 
     def refresh_system(self):
-        version = "Ard OS"
+        version = "FlasterOS"
         try:
             for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
                 if line.startswith("PRETTY_NAME="):
@@ -510,7 +514,7 @@ class SettingsCenter(tk.Tk):
 
         command_text = (
             "install -d -m 0755 /var/log/flasteros; "
-            "{ printf '\\n===== Ard OS update %s =====\\n' \"$(date -Is)\"; "
+            "{ printf '\\n===== FlasterOS update %s =====\\n' \"$(date -Is)\"; "
             "ard-snapshot pre-update && "
             "pacman -Syu --noconfirm; status=$?; "
             "printf '===== update finished with exit code %s =====\\n' \"$status\"; "

@@ -270,7 +270,7 @@ def collect_logs(report):
 
 def generate_report():
     report = Report()
-    report.line("# Ard OS Diagnostic Report")
+    report.line("# FlasterOS Diagnostic Report")
     report.line("")
     report.line("This report is generated for debugging game launch and system compatibility problems.")
     report.line("It avoids browser files, documents, saved passwords, tokens, and unrelated personal files.")
@@ -345,7 +345,7 @@ class DiagnosticsApp(tk.Tk):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Ard OS system diagnostics.")
+    parser = argparse.ArgumentParser(description="Run FlasterOS system diagnostics.")
     parser.add_argument("--report", action="store_true", help="create report.txt and print the path")
     args = parser.parse_args()
     if args.report:

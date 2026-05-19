@@ -32,6 +32,8 @@ Reasons:
 - `docs/updates-checklist.md`: Stage 13 graphical update validation.
 - `docs/snapshots-rollback-checklist.md`: Stage 14 snapshot and rollback validation.
 - `docs/iso-creation-checklist.md`: Stage 15 ISO creation and boot validation.
+- `docs/installer-checklist.md`: Stage 16 guided installer validation.
+- `docs/design-checklist.md`: Stage 17 FlasterOS design validation.
 
 ## Build Requirements
 
@@ -66,23 +68,19 @@ Expected result:
 - The ISO boots.
 - The `ard` live user logs into KDE Plasma automatically.
 - NetworkManager is active.
-- The installer command exists at `/usr/local/bin/ard-install`.
+- The Install FlasterOS desktop icon starts the guided installer.
 
 ## Install To Disk
 
-From the live desktop, open Konsole and run:
+From the live desktop, open **Install FlasterOS**.
 
-```bash
-sudo ard-install --disk /dev/nvme0n1 --hostname ard-os --username ard
-```
+The guided installer asks for language, target disk, username, password, and computer name. It is destructive and asks for confirmation before touching the selected disk.
 
-The installer is destructive and asks for confirmation before touching the target disk.
-
-The installed system uses btrfs with separate subvolumes for system root, home, games, logs, and snapshots. System rollback does not include personal files in `/home` or game data in `/games`.
+The installed system uses a FAT32 EFI partition, a btrfs root partition, and a separate btrfs `/home` partition. The root partition keeps separate system subvolumes for games, logs, and snapshots. System rollback does not include personal files in `/home`.
 
 After install and reboot:
 
-- systemd-boot starts the installed Ard OS system.
+- systemd-boot starts the installed FlasterOS system.
 - The Linux kernel starts from the installed root filesystem.
 - systemd reaches the graphical target.
 - KDE Plasma starts through SDDM.
@@ -94,7 +92,7 @@ After install and reboot:
 
 Ard OS uses `root` only for administration. Daily work, games, launchers, browsers, and the desktop session run as the normal user created by the installer.
 
-The default installed user is `ard` unless another name is passed with `--username`. That user has a home directory, a login shell, and `sudo` access through the `wheel` group.
+The default suggested installed user is `ard`, but the guided installer lets the user choose another name. That user has a home directory, a login shell, and `sudo` access through the `wheel` group.
 
 Games must not be launched as root.
 
@@ -106,7 +104,7 @@ Ard OS is not ready until the full boot chain succeeds:
 BIOS/UEFI -> systemd-boot -> Linux kernel -> systemd -> SDDM login screen -> KDE Plasma desktop
 ```
 
-The installer configures this chain by creating an EFI system partition, installing systemd-boot, writing `/boot/loader/entries/ard-os.conf`, using the root filesystem UUID and btrfs `@` subvolume in the kernel command line, and enabling `sddm.service`.
+The installer configures this chain by creating an EFI system partition, installing systemd-boot, writing a FlasterOS entry to `/boot/loader/entries/ard-os.conf`, using the root filesystem UUID and btrfs `@` subvolume in the kernel command line, and enabling `sddm.service`.
 
 ## Basic Work Check
 
@@ -279,19 +277,18 @@ Driver, kernel, Wine/Proton, DXVK/VKD3D, Vulkan, and graphics stack updates are 
 
 ## Snapshots And Rollback
 
-Stage 14 makes updates recoverable. New Ard OS installs use btrfs subvolumes:
+Stage 14 makes updates recoverable. New Ard OS installs use a btrfs root partition, a separate btrfs `/home` partition, and these root subvolumes:
 
 ```text
 @           system root
-@home       user home data
 @games      installed games and game data
 @var_log    logs
 @snapshots  system restore points
 ```
 
-Before the Settings Center installs updates, it runs `ard-snapshot pre-update`. This creates a labeled system snapshot, saves matching boot files under `/boot/ard-snapshots/`, updates the bootloader's **Ard OS Previous Version** entry, keeps a **Ard OS Recovery** entry, and prunes old pre-update snapshots after the newest five.
+Before the Settings Center installs updates, it runs `ard-snapshot pre-update`. This creates a labeled system snapshot, saves matching boot files under `/boot/ard-snapshots/`, updates the bootloader's **FlasterOS Previous Version** entry, keeps a **FlasterOS Recovery** entry, and prunes old pre-update snapshots after the newest five.
 
-If an update breaks the desktop, graphics driver, Wine/Proton, DXVK/VKD3D, or the launcher, select **Ard OS Previous Version** in the bootloader. After confirming the previous snapshot works, make it permanent with:
+If an update breaks the desktop, graphics driver, Wine/Proton, DXVK/VKD3D, or the launcher, select **FlasterOS Previous Version** in the bootloader. After confirming the previous snapshot works, make it permanent with:
 
 ```bash
 sudo ard-snapshot rollback latest
@@ -321,6 +318,26 @@ bash scripts/test-qemu.sh out/FlasterOS.iso
 
 Stage 15 passes when the ISO boots on UEFI, starts the live graphical system, reaches the internet, has working graphics/audio basics, shows the launcher and Settings Center, and does not contain personal passwords.
 
+## Installer
+
+Stage 16 makes installation a guided desktop workflow. The live desktop contains **Install FlasterOS**, which opens a graphical installer with English and Russian language choices, disk selection with a destructive warning, user creation, and a final confirmation before erasing the disk.
+
+The installer creates:
+
+```text
+EFI     FAT32, mounted at /boot
+/       btrfs root partition
+/home   btrfs home partition
+```
+
+After copying the system, the installer creates the selected user, locks the root account, installs `systemd-boot` to the new EFI partition, and writes the default FlasterOS boot entry. Stage 16 passes when a clean disk install reboots into the installed system without using terminal commands.
+
+## Design
+
+Stage 17 makes FlasterOS visually distinct from a default Arch/KDE install. The profile includes a FlasterOS logo, wallpaper, application icon, SDDM login theme, Plymouth boot screen, dark KDE defaults, and matching launcher and Settings Center headers.
+
+The default visual direction is restrained: dark neutral surfaces, teal and blue accents, Breeze-compatible controls/icons/cursor, Noto Sans fonts, and no heavy animations. Stage 17 passes when boot, login, desktop wallpaper, launcher, and settings all show one consistent FlasterOS identity.
+
 ## Current Scope
 
 Included:
@@ -347,12 +364,13 @@ Included:
 - graphical update checks and installs with `/var/log/flasteros/update.log`
 - btrfs system snapshots before updates and bootloader rollback entries
 - installable FlasterOS archiso output at `out/FlasterOS.iso`
+- guided graphical installer with English and Russian language choices
+- FlasterOS logo, wallpaper, login theme, boot splash, app icon, and dark theme defaults
 - Firefox
-- Installer script for UEFI systems
+- Installer backend for UEFI systems
 
 Deferred:
 
 - GPU vendor tuning
 - Secure Boot signing
-- Calamares or a graphical installer
 - custom package repository

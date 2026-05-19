@@ -84,7 +84,7 @@ class Game:
 class Launcher(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Ard Launcher")
+        self.title("FlasterOS Launcher")
         self.geometry("900x560")
         self.minsize(760, 460)
         self.games = []
@@ -95,6 +95,14 @@ class Launcher(tk.Tk):
     def _build_ui(self):
         root = ttk.Frame(self, padding=12)
         root.pack(fill=tk.BOTH, expand=True)
+
+        style = ttk.Style(self)
+        style.configure("Brand.TLabel", foreground="#1ec8a5", font=("TkDefaultFont", 18, "bold"))
+
+        header = ttk.Frame(root)
+        header.pack(fill=tk.X, pady=(0, 10))
+        ttk.Label(header, text="FlasterOS", style="Brand.TLabel").pack(side=tk.LEFT)
+        ttk.Label(header, text="Launcher").pack(side=tk.LEFT, padx=(8, 0))
 
         left = ttk.Frame(root)
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)

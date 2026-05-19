@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install FlasterOS
+Comment=Guided FlasterOS installation
+Exec=ard-installer
+Icon=flasteros
+Terminal=false
+Categories=System;

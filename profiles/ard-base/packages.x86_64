@@ -48,6 +48,7 @@ plasma-desktop
 plasma-nm
 plasma-pa
 plasma-workspace
+plymouth
 python
 qemu-guest-agent
 power-profiles-daemon

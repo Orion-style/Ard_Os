@@ -3,6 +3,6 @@ Type=Application
 Name=FlasterOS Settings Center
 Comment=Configure network, sound, display, performance, and system settings
 Exec=python3 /opt/ard-os/settings/ard-settings-center.py
-Icon=preferences-system
+Icon=flasteros
 Terminal=false
 Categories=Settings;System;

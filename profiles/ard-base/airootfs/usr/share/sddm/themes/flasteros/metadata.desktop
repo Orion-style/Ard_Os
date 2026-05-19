@@ -1,0 +1,10 @@
+[SddmGreeterTheme]
+Name=FlasterOS
+Description=FlasterOS login theme
+Author=FlasterOS Project
+Copyright=2026 FlasterOS Project
+License=CC0
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf

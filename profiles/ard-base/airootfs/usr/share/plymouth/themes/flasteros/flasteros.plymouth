@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=FlasterOS
+Description=FlasterOS boot screen
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/flasteros
+ScriptFile=/usr/share/plymouth/themes/flasteros/flasteros.script

@@ -1,4 +1,4 @@
 FlasterOS Live ISO
 
 This image is the installable FlasterOS live system.
-Run `sudo ard-install --help` to install FlasterOS to a UEFI machine.
+Use the Install FlasterOS desktop icon to install FlasterOS to a UEFI machine.

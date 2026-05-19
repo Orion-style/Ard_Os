@@ -3,6 +3,6 @@ Type=Application
 Name=Ard Diagnostics
 Comment=Check FlasterOS gaming compatibility and create a safe report
 Exec=ard-check-system
-Icon=utilities-system-monitor
+Icon=flasteros
 Terminal=false
 Categories=System;Utility;

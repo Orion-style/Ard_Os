@@ -6,12 +6,11 @@ Updates can break graphics drivers, Wine, Proton, DXVK, VKD3D, the desktop, or t
 
 ## 14.1 Use btrfs
 
-New installs must use btrfs for the root partition.
+New installs must use btrfs for the root partition and for `/home`.
 
-Required subvolumes:
+Required root subvolumes:
 
 - `@`: system root.
-- `@home`: personal files.
 - `@games`: installed games, prefixes, and game data.
 - `@var_log`: system logs.
 - `@snapshots`: system restore points.
@@ -19,7 +18,7 @@ Required subvolumes:
 Validation:
 
 - `/` is mounted from btrfs subvolume `@`.
-- `/home` is mounted from `@home`.
+- `/home` is mounted from a separate btrfs home partition.
 - `/games` is mounted from `@games`.
 - `/var/log` is mounted from `@var_log`.
 - `/.snapshots` is mounted from `@snapshots`.
@@ -47,9 +46,9 @@ Validation:
 
 The systemd-boot menu must offer:
 
-- **Ard OS**: normal system.
-- **Ard OS Previous Version**: newest pre-update snapshot.
-- **Ard OS Recovery**: rescue target on the normal root.
+- **FlasterOS**: normal system.
+- **FlasterOS Previous Version**: newest pre-update snapshot.
+- **FlasterOS Recovery**: rescue target on the normal root.
 
 Validation:
 
@@ -63,7 +62,7 @@ Validation:
 If the updated system is broken:
 
 1. Reboot.
-2. Select **Ard OS Previous Version**.
+2. Select **FlasterOS Previous Version**.
 3. Confirm the desktop, graphics, launcher, and compatibility stack work.
 4. Run:
 
