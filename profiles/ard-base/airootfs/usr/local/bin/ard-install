@@ -124,7 +124,7 @@ mount --mkdir "$efi_part" /mnt/boot
 
 pacstrap -K /mnt \
   base linux linux-firmware \
-  networkmanager sudo vim nano pciutils jq \
+  networkmanager sudo vim nano pciutils jq pacman-contrib \
   alsa-utils sof-firmware \
   pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \

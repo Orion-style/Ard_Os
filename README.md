@@ -29,6 +29,7 @@ Reasons:
 - `docs/gaming-mode-checklist.md`: Stage 10 Gaming Mode session validation.
 - `docs/settings-center-checklist.md`: Stage 11 Settings Center validation.
 - `docs/diagnostics-checklist.md`: Stage 12 diagnostics and report validation.
+- `docs/updates-checklist.md`: Stage 13 graphical update validation.
 
 ## Build Requirements
 
@@ -246,6 +247,26 @@ The launcher and Settings Center expose the same tool through **Check System**. 
 
 The report covers OS and kernel version, CPU, GPU and driver, Vulkan, OpenGL, Wine, Proton, DXVK, VKD3D, network reachability, disk usage, prefix sizes, and recent game launch logs. Reports are bounded and redact common password, token, authorization, and cookie fields before saving.
 
+## Updates
+
+Stage 13 makes system updates a Settings Center workflow instead of a terminal workflow.
+
+Open:
+
+```bash
+ard-settings-center
+```
+
+In the **System** tab, press **Check Updates** to review available updates before installing them. The update list shows package name, update area, current version, new version, approximate download size, and whether a reboot is expected. The check covers system packages, kernel, drivers, Wine, Proton or Steam-managed compatibility packages available through system packages, DXVK, VKD3D, launcher packages when packaged, and desktop theme packages.
+
+Press **Install Updates** only after the list is visible. The Settings Center writes update output to:
+
+```text
+/var/log/flasteros/update.log
+```
+
+Driver, kernel, Wine/Proton, DXVK/VKD3D, Vulkan, and graphics stack updates are treated as reboot-risk updates because they can affect display stability and game compatibility. Stage 13 passes when update check, install, log creation, error handling, and post-reboot operation all work through the interface. Move to Stage 14 rollback work only after this path is reliable.
+
 ## Current Scope
 
 Included:
@@ -269,6 +290,7 @@ Included:
 - Gaming Mode login session
 - graphical Settings Center for network, sound, display, performance, and system actions
 - diagnostics tool with safe report generation for graphics, Wine/Proton, DXVK/VKD3D, network, disk, and launch logs
+- graphical update checks and installs with `/var/log/flasteros/update.log`
 - Firefox
 - Installer script for UEFI systems
 
