@@ -27,6 +27,7 @@ Reasons:
 - `docs/game-launcher-checklist.md`: Stage 8 launcher validation.
 - `docs/game-profiles-checklist.md`: Stage 9 per-game launch profile validation.
 - `docs/gaming-mode-checklist.md`: Stage 10 Gaming Mode session validation.
+- `docs/settings-center-checklist.md`: Stage 11 Settings Center validation.
 
 ## Build Requirements
 
@@ -216,6 +217,18 @@ SDDM shows `Ard Desktop Mode` for the normal KDE Plasma desktop and `Ard Gaming 
 
 The launcher includes Exit Session, Reboot, and Shutdown buttons. Emergency exit shortcuts are `Ctrl+Alt+Backspace` and `Ctrl+Alt+B`.
 
+## Settings Center
+
+Stage 11 adds a graphical settings interface:
+
+```bash
+ard-settings-center
+```
+
+The Settings Center is available from the desktop and from the launcher. It covers Wi-Fi, Ethernet status, IP address, sound output and microphone selection, volume, sound test, display resolution, refresh rate, scaling, main monitor, performance mode, FPS limit, MangoHud, Gamemode, updates, logs, reboot, shutdown, and OS version.
+
+Normal users should not need terminal commands for internet, sound, display, or gaming performance basics. The interface uses system tools such as NetworkManager, PipeWire/PulseAudio, xrandr, powerprofilesctl, pacman, journalctl, and systemctl, and shows visible errors when a required tool or permission is missing.
+
 ## Current Scope
 
 Included:
@@ -237,6 +250,7 @@ Included:
 - graphical game launcher
 - per-game launch profiles
 - Gaming Mode login session
+- graphical Settings Center for network, sound, display, performance, and system actions
 - Firefox
 - Installer script for UEFI systems
 

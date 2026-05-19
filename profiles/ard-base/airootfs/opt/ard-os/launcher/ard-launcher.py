@@ -11,6 +11,7 @@ from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 
 GAMES_DIR = Path("/games")
+PERFORMANCE_CONFIG = Path.home() / ".config" / "ard-os" / "performance.json"
 
 
 class Game:
@@ -120,6 +121,7 @@ class Launcher(tk.Tk):
         self.play_button = ttk.Button(right, text="Play", command=self.play_selected)
         self.play_button.pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Settings", command=self.show_settings).pack(fill=tk.X, pady=(0, 8))
+        ttk.Button(right, text="Settings Center", command=self.open_settings_center).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Add Game", command=self.add_game).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Remove Game", command=self.remove_game).pack(fill=tk.X, pady=(0, 8))
         ttk.Button(right, text="Logs", command=self.show_logs).pack(fill=tk.X, pady=(0, 8))
@@ -211,6 +213,7 @@ class Launcher(tk.Tk):
         env.setdefault("DXVK_HUD", "0")
         env.update(self._mangohud_env(game))
         command = self._build_command(game)
+        command = self._apply_performance_command(command)
 
         self.status.set(f"Launching {game.name}")
         self.play_button.configure(state=tk.DISABLED)
@@ -268,6 +271,18 @@ class Launcher(tk.Tk):
 
         return command
 
+    def _performance_config(self):
+        try:
+            return json.loads(PERFORMANCE_CONFIG.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def _apply_performance_command(self, command):
+        settings = self._performance_config()
+        if settings.get("gamemode") and shutil.which("gamemoderun"):
+            command = ["gamemoderun", *command]
+        return command
+
     def _gamescope_prefix(self, settings):
         command = ["gamescope"]
         width = settings.get("width") or settings.get("resolution_width")
@@ -289,7 +304,8 @@ class Launcher(tk.Tk):
 
     def _mangohud_env(self, game):
         settings = game.mangohud
-        env = {"MANGOHUD": "1" if settings.get("enabled") else "0"}
+        performance = self._performance_config()
+        env = {"MANGOHUD": "1" if settings.get("enabled") or performance.get("mangohud") else "0"}
         options = []
         if settings.get("show_fps"):
             options.append("fps")
@@ -306,6 +322,12 @@ class Launcher(tk.Tk):
         if game is None:
             return
         ProfileEditor(self, game, self.refresh_games)
+
+    def open_settings_center(self):
+        try:
+            subprocess.Popen(["python3", "/opt/ard-os/settings/ard-settings-center.py"])
+        except OSError as exc:
+            self._show_error("Settings Center", f"Could not open Settings Center: {exc}")
 
     def show_logs(self):
         game = self.selected_game()
@@ -348,6 +370,8 @@ class Launcher(tk.Tk):
         prefix.mkdir(parents=True, exist_ok=True)
         (logs / "last-launch.log").touch()
         (logs / "crash.log").touch()
+        performance = self._performance_config()
+        fps_limit = self._int_or_default(performance.get("fps_limit"), 60)
         config = {
             "name": name,
             "exe": exe,
@@ -362,11 +386,11 @@ class Launcher(tk.Tk):
                 "width": 1920,
                 "height": 1080,
                 "fullscreen": True,
-                "fps_limit": 60,
+                "fps_limit": fps_limit,
                 "scaling": "fit",
             },
             "mangohud": {
-                "enabled": False,
+                "enabled": bool(performance.get("mangohud", False)),
                 "show_fps": True,
                 "show_temperature": False,
                 "show_frametime": False,
@@ -374,6 +398,12 @@ class Launcher(tk.Tk):
         }
         (game_dir / "config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
         self.refresh_games()
+
+    def _int_or_default(self, value, default):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
     def remove_game(self):
         game = self.selected_game()

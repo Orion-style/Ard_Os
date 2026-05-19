@@ -3,6 +3,9 @@ set -euo pipefail
 
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
+systemctl enable power-profiles-daemon.service || true
+
+chmod 0755 /usr/local/bin/ard-settings-center /opt/ard-os/settings/ard-settings-center.py
 
 useradd -m -G wheel -s /bin/bash ard
 passwd -d ard
@@ -36,7 +39,9 @@ EOF
 chmod 0755 /home/ard/Desktop/ard-install.desktop
 
 cp /usr/share/applications/ard-launcher.desktop /home/ard/Desktop/ard-launcher.desktop
+cp /usr/share/applications/ard-settings-center.desktop /home/ard/Desktop/ard-settings-center.desktop
 chmod 0755 /home/ard/Desktop/ard-launcher.desktop
+chmod 0755 /home/ard/Desktop/ard-settings-center.desktop
 chown -R ard:ard /home/ard
 
 printf 'ard-live\n' > /etc/hostname

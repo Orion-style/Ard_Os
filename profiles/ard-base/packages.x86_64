@@ -49,6 +49,7 @@ plasma-nm
 plasma-pa
 plasma-workspace
 python
+power-profiles-daemon
 sddm
 sof-firmware
 steam
@@ -67,5 +68,6 @@ wine-mono
 wireplumber
 winetricks
 xdg-user-dirs
+xorg-xrandr
 xorg-server
 xorg-xwayland
