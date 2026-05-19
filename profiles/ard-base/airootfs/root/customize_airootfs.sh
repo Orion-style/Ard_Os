@@ -4,8 +4,10 @@ set -euo pipefail
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
 systemctl enable power-profiles-daemon.service || true
+systemctl enable qemu-guest-agent.service || true
+systemctl enable vboxservice.service || true
 
-chmod 0755 /usr/local/bin/ard-settings-center /usr/local/bin/ard-check-system
+chmod 0755 /usr/local/bin/ard-settings-center /usr/local/bin/ard-check-system /usr/local/bin/ard-snapshot
 chmod 0755 /opt/ard-os/settings/ard-settings-center.py /opt/ard-os/diagnostics/ard-diagnostics.py
 
 useradd -m -G wheel -s /bin/bash ard

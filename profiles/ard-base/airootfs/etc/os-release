@@ -1,7 +1,7 @@
-NAME="Ard OS"
-PRETTY_NAME="Ard OS Base"
-ID=ard
+NAME="FlasterOS"
+PRETTY_NAME="FlasterOS Live"
+ID=flasteros
 ID_LIKE=arch
-BUILD_ID=base
+BUILD_ID=live
 ANSI_COLOR="1;36"
 DOCUMENTATION_URL="https://wiki.archlinux.org/"

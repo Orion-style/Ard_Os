@@ -1,0 +1,253 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MAX_SNAPSHOTS=5
+LOG_FILE="/var/log/flasteros/update.log"
+MOUNT_POINT="/run/ard-snapshot-root"
+SNAPSHOT_ROOT="@snapshots"
+NORMAL_ENTRY="/boot/loader/entries/ard-os.conf"
+PREVIOUS_ENTRY="/boot/loader/entries/ard-os-previous.conf"
+RECOVERY_ENTRY="/boot/loader/entries/ard-os-recovery.conf"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-snapshot pre-update
+  ard-snapshot list
+  ard-snapshot rollback latest|SNAPSHOT_NAME
+
+Creates btrfs system snapshots for Ard OS updates.
+Personal data in /home and game data in /games are separate subvolumes and are not rolled back.
+EOF
+}
+
+log() {
+  install -d -m 0755 "$(dirname "$LOG_FILE")"
+  printf '[snapshot] %s\n' "$*" | tee -a "$LOG_FILE"
+}
+
+require_root() {
+  if [[ "$(id -u)" -ne 0 ]]; then
+    echo "Run as root." >&2
+    exit 1
+  fi
+}
+
+root_device() {
+  local source
+  source="$(findmnt -n -o SOURCE /)"
+  source="${source%%\[*}"
+  printf '%s\n' "$source"
+}
+
+root_subvolume() {
+  local fsroot
+  fsroot="$(findmnt -n -o FSROOT /)"
+  fsroot="${fsroot#/}"
+  if [[ -z "$fsroot" ]]; then
+    echo "Root filesystem is not mounted from a btrfs subvolume." >&2
+    exit 1
+  fi
+  printf '%s\n' "$fsroot"
+}
+
+root_uuid() {
+  local device
+  device="$(root_device)"
+  blkid -s UUID -o value "$device"
+}
+
+require_btrfs_root() {
+  if [[ "$(findmnt -n -o FSTYPE /)" != "btrfs" ]]; then
+    echo "Snapshots require Ard OS to be installed on btrfs." >&2
+    exit 1
+  fi
+  if ! command -v btrfs >/dev/null 2>&1; then
+    echo "btrfs-progs is required." >&2
+    exit 1
+  fi
+}
+
+mount_top_level() {
+  install -d -m 0755 "$MOUNT_POINT"
+  if mountpoint -q "$MOUNT_POINT"; then
+    return
+  fi
+  mount -o subvolid=5 "$(root_device)" "$MOUNT_POINT"
+}
+
+unmount_top_level() {
+  if mountpoint -q "$MOUNT_POINT"; then
+    umount "$MOUNT_POINT"
+  fi
+}
+
+write_normal_entry() {
+  local uuid root_subvol
+  uuid="$(root_uuid)"
+  root_subvol="${1:-@}"
+  cat > "$NORMAL_ENTRY" <<ENTRY
+title Ard OS
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /amd-ucode.img
+initrd /initramfs-linux.img
+options root=UUID=$uuid rootflags=subvol=$root_subvol rw quiet
+ENTRY
+}
+
+write_previous_entry() {
+  local snapshot uuid
+  snapshot="$1"
+  uuid="$(root_uuid)"
+  cat > "$PREVIOUS_ENTRY" <<ENTRY
+title Ard OS Previous Version
+linux /ard-snapshots/$snapshot/vmlinuz-linux
+initrd /ard-snapshots/$snapshot/intel-ucode.img
+initrd /ard-snapshots/$snapshot/amd-ucode.img
+initrd /ard-snapshots/$snapshot/initramfs-linux.img
+options root=UUID=$uuid rootflags=subvol=$SNAPSHOT_ROOT/$snapshot rw quiet
+ENTRY
+}
+
+write_recovery_entry() {
+  local uuid
+  uuid="$(root_uuid)"
+  cat > "$RECOVERY_ENTRY" <<ENTRY
+title Ard OS Recovery
+linux /vmlinuz-linux
+initrd /intel-ucode.img
+initrd /amd-ucode.img
+initrd /initramfs-linux.img
+options root=UUID=$uuid rootflags=subvol=@ rw systemd.unit=rescue.target
+ENTRY
+}
+
+copy_boot_files() {
+  local snapshot boot_dir file
+  snapshot="$1"
+  boot_dir="/boot/ard-snapshots/$snapshot"
+  install -d -m 0755 "$boot_dir"
+  for file in vmlinuz-linux initramfs-linux.img intel-ucode.img amd-ucode.img; do
+    if [[ -f "/boot/$file" ]]; then
+      cp -a "/boot/$file" "$boot_dir/$file"
+    fi
+  done
+}
+
+prune_snapshots() {
+  local snapshots count prune_count remove snapshot_name
+  mapfile -t snapshots < <(find "$MOUNT_POINT/$SNAPSHOT_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'pre-update-*' -printf '%f\n' | sort)
+  count="${#snapshots[@]}"
+  if (( count <= MAX_SNAPSHOTS )); then
+    return
+  fi
+  prune_count=$((count - MAX_SNAPSHOTS))
+  for remove in "${snapshots[@]:0:prune_count}"; do
+    snapshot_name="$MOUNT_POINT/$SNAPSHOT_ROOT/$remove"
+    log "Pruning old snapshot $remove"
+    btrfs subvolume delete "$snapshot_name" >/dev/null
+    rm -rf "/boot/ard-snapshots/$remove"
+  done
+}
+
+create_pre_update_snapshot() {
+  local root_subvol snapshot target
+  root_subvol="$(root_subvolume)"
+  if [[ "$root_subvol" != "@" ]]; then
+    echo "Pre-update snapshots must be created from the normal Ard OS root, not $root_subvol." >&2
+    exit 1
+  fi
+  snapshot="pre-update-$(date +%Y%m%d-%H%M%S)"
+  target="$MOUNT_POINT/$SNAPSHOT_ROOT/$snapshot"
+  install -d -m 0755 "$MOUNT_POINT/$SNAPSHOT_ROOT"
+  log "Creating btrfs snapshot $snapshot"
+  btrfs subvolume snapshot "$MOUNT_POINT/@" "$target" >/dev/null
+  printf 'name=%s\ncreated=%s\nreason=pre-update\n' "$snapshot" "$(date -Is)" > "$target/.ard-snapshot-info"
+  copy_boot_files "$snapshot"
+  write_previous_entry "$snapshot"
+  write_recovery_entry
+  prune_snapshots
+  log "Snapshot ready: $snapshot"
+}
+
+list_snapshots() {
+  find "$MOUNT_POINT/$SNAPSHOT_ROOT" -mindepth 1 -maxdepth 1 -type d -name 'pre-update-*' -printf '%f\n' | sort -r
+}
+
+latest_snapshot() {
+  list_snapshots | head -n 1
+}
+
+restore_boot_files() {
+  local snapshot boot_dir file
+  snapshot="$1"
+  boot_dir="/boot/ard-snapshots/$snapshot"
+  for file in vmlinuz-linux initramfs-linux.img intel-ucode.img amd-ucode.img; do
+    if [[ -f "$boot_dir/$file" ]]; then
+      cp -a "$boot_dir/$file" "/boot/$file"
+    fi
+  done
+}
+
+rollback_snapshot() {
+  local requested snapshot broken
+  requested="${1:-latest}"
+  if [[ "$(root_subvolume)" == "@" ]]; then
+    echo "Boot Ard OS Previous Version before permanent rollback." >&2
+    exit 1
+  fi
+  if [[ "$requested" == "latest" ]]; then
+    snapshot="$(latest_snapshot)"
+  else
+    snapshot="$requested"
+  fi
+  if [[ -z "$snapshot" || ! -d "$MOUNT_POINT/$SNAPSHOT_ROOT/$snapshot" ]]; then
+    echo "Snapshot not found: ${requested:-latest}" >&2
+    exit 1
+  fi
+  broken="@broken-$(date +%Y%m%d-%H%M%S)"
+  log "Rolling back system root to $snapshot"
+  mv "$MOUNT_POINT/@" "$MOUNT_POINT/$broken"
+  btrfs subvolume snapshot "$MOUNT_POINT/$SNAPSHOT_ROOT/$snapshot" "$MOUNT_POINT/@" >/dev/null
+  restore_boot_files "$snapshot"
+  write_normal_entry "@"
+  write_recovery_entry
+  log "Rollback complete. Previous broken root saved as $broken"
+}
+
+main() {
+  local command="${1:-}"
+  case "$command" in
+    pre-update)
+      require_root
+      require_btrfs_root
+      trap unmount_top_level EXIT
+      mount_top_level
+      create_pre_update_snapshot
+      ;;
+    list)
+      require_btrfs_root
+      trap unmount_top_level EXIT
+      mount_top_level
+      list_snapshots
+      ;;
+    rollback)
+      require_root
+      require_btrfs_root
+      trap unmount_top_level EXIT
+      mount_top_level
+      rollback_snapshot "${2:-latest}"
+      ;;
+    --help|-h|"")
+      usage
+      ;;
+    *)
+      echo "Unknown command: $command" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

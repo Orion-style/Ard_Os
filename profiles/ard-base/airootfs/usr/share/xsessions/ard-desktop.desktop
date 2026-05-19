@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Ard Desktop Mode
+Name=FlasterOS Desktop Mode
 Comment=Start a normal KDE Plasma desktop
 Exec=startplasma-x11
 TryExec=startplasma-x11

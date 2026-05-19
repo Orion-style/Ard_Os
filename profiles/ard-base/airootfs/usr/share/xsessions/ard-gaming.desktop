@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=Ard Gaming Mode
-Comment=Start Ard Launcher inside a Gamescope gaming session
+Name=FlasterOS Gaming Mode
+Comment=Start FlasterOS Launcher inside a Gamescope gaming session
 Exec=/usr/local/bin/ard-gaming-session
 TryExec=/usr/local/bin/ard-gaming-session
 Type=Application

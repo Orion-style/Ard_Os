@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Ard Launcher
-Comment=Launch games from Ard OS game configs
+Name=FlasterOS Launcher
+Comment=Launch games from FlasterOS game configs
 Exec=ard-launcher
 Icon=applications-games
 Terminal=false

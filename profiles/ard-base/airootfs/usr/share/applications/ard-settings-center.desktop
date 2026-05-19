@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Ard Settings Center
+Name=FlasterOS Settings Center
 Comment=Configure network, sound, display, performance, and system settings
 Exec=python3 /opt/ard-os/settings/ard-settings-center.py
 Icon=preferences-system

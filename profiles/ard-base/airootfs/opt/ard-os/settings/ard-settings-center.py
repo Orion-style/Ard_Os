@@ -502,7 +502,7 @@ class SettingsCenter(tk.Tk):
             self._error("Install Updates", "Check for updates first.")
             return
         reboot = any(row["reboot"] for row in self.update_rows)
-        message = f"Install {len(self.update_rows)} update(s) now?\n\nA log will be written to {UPDATE_LOG}."
+        message = f"Install {len(self.update_rows)} update(s) now?\n\nA btrfs snapshot will be created first. A log will be written to {UPDATE_LOG}."
         if reboot:
             message += "\n\nA reboot is expected after this update."
         if not messagebox.askyesno("Install Updates", message, parent=self):
@@ -511,6 +511,7 @@ class SettingsCenter(tk.Tk):
         command_text = (
             "install -d -m 0755 /var/log/flasteros; "
             "{ printf '\\n===== Ard OS update %s =====\\n' \"$(date -Is)\"; "
+            "ard-snapshot pre-update && "
             "pacman -Syu --noconfirm; status=$?; "
             "printf '===== update finished with exit code %s =====\\n' \"$status\"; "
             "exit \"$status\"; } >> /var/log/flasteros/update.log 2>&1"

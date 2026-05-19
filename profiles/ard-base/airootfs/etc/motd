@@ -1,4 +1,4 @@
-Ard OS Base Live ISO
+FlasterOS Live ISO
 
-This image is the base-system foundation only.
-Run `sudo ard-install --help` to install Ard OS to a UEFI machine.
+This image is the installable FlasterOS live system.
+Run `sudo ard-install --help` to install FlasterOS to a UEFI machine.

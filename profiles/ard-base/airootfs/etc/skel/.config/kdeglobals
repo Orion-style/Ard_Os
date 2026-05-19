@@ -1,0 +1,17 @@
+[General]
+ColorScheme=BreezeDark
+Name=FlasterOS
+shadeSortColumn=true
+
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+SingleClick=false
+
+[Icons]
+Theme=breeze-dark
+
+[WM]
+activeBackground=36,111,191
+activeForeground=255,255,255
+inactiveBackground=49,54,59
+inactiveForeground=189,195,199

@@ -30,6 +30,8 @@ Reasons:
 - `docs/settings-center-checklist.md`: Stage 11 Settings Center validation.
 - `docs/diagnostics-checklist.md`: Stage 12 diagnostics and report validation.
 - `docs/updates-checklist.md`: Stage 13 graphical update validation.
+- `docs/snapshots-rollback-checklist.md`: Stage 14 snapshot and rollback validation.
+- `docs/iso-creation-checklist.md`: Stage 15 ISO creation and boot validation.
 
 ## Build Requirements
 
@@ -47,10 +49,16 @@ bash scripts/build-iso.sh
 
 The ISO will be written to `out/`.
 
+The stable install image path is:
+
+```text
+out/FlasterOS.iso
+```
+
 ## Test The ISO
 
 ```bash
-bash scripts/test-qemu.sh out/ard-os-YYYY.MM.DD-x86_64.iso
+bash scripts/test-qemu.sh out/FlasterOS.iso
 ```
 
 Expected result:
@@ -69,6 +77,8 @@ sudo ard-install --disk /dev/nvme0n1 --hostname ard-os --username ard
 ```
 
 The installer is destructive and asks for confirmation before touching the target disk.
+
+The installed system uses btrfs with separate subvolumes for system root, home, games, logs, and snapshots. System rollback does not include personal files in `/home` or game data in `/games`.
 
 After install and reboot:
 
@@ -96,7 +106,7 @@ Ard OS is not ready until the full boot chain succeeds:
 BIOS/UEFI -> systemd-boot -> Linux kernel -> systemd -> SDDM login screen -> KDE Plasma desktop
 ```
 
-The installer configures this chain by creating an EFI system partition, installing systemd-boot, writing `/boot/loader/entries/ard-os.conf`, using the root filesystem UUID in the kernel command line, and enabling `sddm.service`.
+The installer configures this chain by creating an EFI system partition, installing systemd-boot, writing `/boot/loader/entries/ard-os.conf`, using the root filesystem UUID and btrfs `@` subvolume in the kernel command line, and enabling `sddm.service`.
 
 ## Basic Work Check
 
@@ -267,6 +277,50 @@ Press **Install Updates** only after the list is visible. The Settings Center wr
 
 Driver, kernel, Wine/Proton, DXVK/VKD3D, Vulkan, and graphics stack updates are treated as reboot-risk updates because they can affect display stability and game compatibility. Stage 13 passes when update check, install, log creation, error handling, and post-reboot operation all work through the interface. Move to Stage 14 rollback work only after this path is reliable.
 
+## Snapshots And Rollback
+
+Stage 14 makes updates recoverable. New Ard OS installs use btrfs subvolumes:
+
+```text
+@           system root
+@home       user home data
+@games      installed games and game data
+@var_log    logs
+@snapshots  system restore points
+```
+
+Before the Settings Center installs updates, it runs `ard-snapshot pre-update`. This creates a labeled system snapshot, saves matching boot files under `/boot/ard-snapshots/`, updates the bootloader's **Ard OS Previous Version** entry, keeps a **Ard OS Recovery** entry, and prunes old pre-update snapshots after the newest five.
+
+If an update breaks the desktop, graphics driver, Wine/Proton, DXVK/VKD3D, or the launcher, select **Ard OS Previous Version** in the bootloader. After confirming the previous snapshot works, make it permanent with:
+
+```bash
+sudo ard-snapshot rollback latest
+```
+
+The broken root is preserved as `@broken-YYYYMMDD-HHMMSS` for inspection. Move to Stage 15 only after a deliberately failed update can be recovered by booting a previous snapshot.
+
+## ISO Creation
+
+Stage 15 turns the profile into an installable FlasterOS ISO:
+
+```bash
+bash scripts/build-iso.sh
+```
+
+The archiso profile includes the package list, NetworkManager, PipeWire, KDE graphical sessions, launcher desktop entries, Settings Center, diagnostics, update/snapshot tooling, VM guest packages for QEMU and VirtualBox, and baseline KDE user settings. The profile metadata produces FlasterOS-labeled archiso output, and the build script copies the latest dated artifact to:
+
+```text
+out/FlasterOS.iso
+```
+
+Validate the ISO in QEMU with:
+
+```bash
+bash scripts/test-qemu.sh out/FlasterOS.iso
+```
+
+Stage 15 passes when the ISO boots on UEFI, starts the live graphical system, reaches the internet, has working graphics/audio basics, shows the launcher and Settings Center, and does not contain personal passwords.
+
 ## Current Scope
 
 Included:
@@ -291,14 +345,14 @@ Included:
 - graphical Settings Center for network, sound, display, performance, and system actions
 - diagnostics tool with safe report generation for graphics, Wine/Proton, DXVK/VKD3D, network, disk, and launch logs
 - graphical update checks and installs with `/var/log/flasteros/update.log`
+- btrfs system snapshots before updates and bootloader rollback entries
+- installable FlasterOS archiso output at `out/FlasterOS.iso`
 - Firefox
 - Installer script for UEFI systems
 
 Deferred:
 
 - GPU vendor tuning
-- Ard OS theme and branding
 - Secure Boot signing
-- release ISO creation workflow
 - Calamares or a graphical installer
 - custom package repository

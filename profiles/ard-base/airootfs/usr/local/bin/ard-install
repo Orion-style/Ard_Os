@@ -16,7 +16,7 @@ Options:
 
 This installer targets UEFI systems and creates:
   1. 1 GiB FAT32 EFI system partition
-  2. remaining disk as ext4 root
+  2. remaining disk as btrfs with separate system, home, games, log, and snapshot subvolumes
 EOF
 }
 
@@ -112,19 +112,31 @@ parted --script "$disk" \
   mklabel gpt \
   mkpart ESP fat32 1MiB 1025MiB \
   set 1 esp on \
-  mkpart primary ext4 1025MiB 100%
+  mkpart primary btrfs 1025MiB 100%
 partprobe "$disk"
 udevadm settle
 
 mkfs.fat -F32 "$efi_part"
-mkfs.ext4 -F -L ARDROOT "$root_part"
+mkfs.btrfs -f -L ARDROOT "$root_part"
 
 mount "$root_part" /mnt
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@games
+btrfs subvolume create /mnt/@var_log
+btrfs subvolume create /mnt/@snapshots
+umount /mnt
+
+mount -o noatime,compress=zstd,subvol=@ "$root_part" /mnt
+mount --mkdir -o noatime,compress=zstd,subvol=@home "$root_part" /mnt/home
+mount --mkdir -o noatime,compress=zstd,subvol=@games "$root_part" /mnt/games
+mount --mkdir -o noatime,compress=zstd,subvol=@var_log "$root_part" /mnt/var/log
+mount --mkdir -o noatime,compress=zstd,subvol=@snapshots "$root_part" /mnt/.snapshots
 mount --mkdir "$efi_part" /mnt/boot
 
 pacstrap -K /mnt \
   base linux linux-firmware \
-  networkmanager sudo vim nano pciutils jq pacman-contrib \
+  btrfs-progs networkmanager sudo vim nano pciutils jq pacman-contrib qemu-guest-agent spice-vdagent virtualbox-guest-utils \
   alsa-utils sof-firmware \
   pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
@@ -142,9 +154,12 @@ install -Dm755 /usr/local/bin/ard-create-game /mnt/usr/local/bin/ard-create-game
 install -Dm755 /usr/local/bin/ard-run-game /mnt/usr/local/bin/ard-run-game
 install -Dm755 /usr/local/bin/ard-launcher /mnt/usr/local/bin/ard-launcher
 install -Dm755 /usr/local/bin/ard-settings-center /mnt/usr/local/bin/ard-settings-center
+install -Dm755 /usr/local/bin/ard-snapshot /mnt/usr/local/bin/ard-snapshot
 install -Dm755 /usr/local/bin/ard-gaming-session /mnt/usr/local/bin/ard-gaming-session
 install -Dm755 /usr/local/bin/ard-install-gpu-drivers /mnt/usr/local/bin/ard-install-gpu-drivers
 install -Dm755 /usr/local/bin/ard-install-gaming-compat /mnt/usr/local/bin/ard-install-gaming-compat
+install -Dm644 /etc/skel/.config/kdeglobals /mnt/etc/skel/.config/kdeglobals
+install -Dm644 /etc/skel/.config/kscreenlockerrc /mnt/etc/skel/.config/kscreenlockerrc
 install -Dm755 /opt/ard-os/launcher/ard-launcher.py /mnt/opt/ard-os/launcher/ard-launcher.py
 install -Dm755 /opt/ard-os/settings/ard-settings-center.py /mnt/opt/ard-os/settings/ard-settings-center.py
 install -Dm644 /usr/share/applications/ard-launcher.desktop /mnt/usr/share/applications/ard-launcher.desktop
@@ -179,11 +194,13 @@ linux /vmlinuz-linux
 initrd /intel-ucode.img
 initrd /amd-ucode.img
 initrd /initramfs-linux.img
-options root=UUID=\$root_uuid rw quiet
+options root=UUID=\$root_uuid rootflags=subvol=@ rw quiet
 ENTRY
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
 systemctl enable power-profiles-daemon.service || true
+systemctl enable qemu-guest-agent.service || true
+systemctl enable vboxservice.service || true
 useradd -m -G wheel -s /bin/bash "$username"
 install -d -m 0755 /opt/ard-os
 install -d -m 0775 -o "$username" -g wheel /games
@@ -193,6 +210,7 @@ passwd "$username"
 printf 'Set password for root:\n'
 passwd
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+/usr/local/bin/ard-snapshot pre-update
 EOF
 
 umount -R /mnt

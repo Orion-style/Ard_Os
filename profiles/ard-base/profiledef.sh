@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-iso_name="ard-os"
-iso_label="ARDOS_$(date +%Y%m)"
-iso_publisher="Ard OS Project"
-iso_application="Ard OS Base Live ISO"
+iso_name="FlasterOS"
+iso_label="FLASTEROS_$(date +%Y%m)"
+iso_publisher="FlasterOS Project"
+iso_application="FlasterOS Live Install ISO"
 iso_version="$(date +%Y.%m.%d)"
-install_dir="ard"
+install_dir="flaster"
 buildmodes=('iso')
 bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-ia32.grub.esp' 'uefi-x64.grub.esp' 'uefi-ia32.grub.eltorito' 'uefi-x64.grub.eltorito')
 arch="x86_64"
@@ -22,6 +22,11 @@ file_permissions=(
   ["/usr/local/bin/ard-create-game"]="0:0:755"
   ["/usr/local/bin/ard-run-game"]="0:0:755"
   ["/usr/local/bin/ard-launcher"]="0:0:755"
+  ["/usr/local/bin/ard-settings-center"]="0:0:755"
+  ["/usr/local/bin/ard-check-system"]="0:0:755"
+  ["/usr/local/bin/ard-snapshot"]="0:0:755"
   ["/usr/local/bin/ard-gaming-session"]="0:0:755"
   ["/opt/ard-os/launcher/ard-launcher.py"]="0:0:755"
+  ["/opt/ard-os/settings/ard-settings-center.py"]="0:0:755"
+  ["/opt/ard-os/diagnostics/ard-diagnostics.py"]="0:0:755"
 )

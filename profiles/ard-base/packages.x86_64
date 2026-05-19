@@ -49,14 +49,17 @@ plasma-nm
 plasma-pa
 plasma-workspace
 python
+qemu-guest-agent
 power-profiles-daemon
 sddm
 sof-firmware
+spice-vdagent
 steam
 sudo
 systemd-resolvconf
 tk
 vim
+virtualbox-guest-utils
 vulkan-icd-loader
 vulkan-intel
 vulkan-radeon
