@@ -57,7 +57,9 @@ if [[ -z "$latest_iso" ]]; then
 fi
 
 cp -f "$latest_iso" "$stable_iso"
-cp -f "$latest_iso" "$release_iso"
+if [[ "$(realpath "$latest_iso")" != "$(realpath -m "$release_iso")" ]]; then
+  cp -f "$latest_iso" "$release_iso"
+fi
 (cd "$out_dir" && sha256sum "$(basename "$release_iso")" > "$(basename "$release_checksum")")
 echo "ISO ready: $stable_iso"
 echo "Release ISO ready: $release_iso"
