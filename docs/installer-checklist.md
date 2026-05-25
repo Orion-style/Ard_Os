@@ -40,6 +40,14 @@ EFI     FAT32, mounted at /boot
 
 The root partition also contains Ard OS system subvolumes for games, logs, and snapshots. `/home` is a separate btrfs partition so user data is not part of system rollback.
 
+Storage requirements for gaming:
+
+- Minimum target disk: 256 GiB SSD.
+- Recommended for Genshin Impact + Honkai: Star Rail + Zenless Zone Zero: 512 GiB SSD.
+- `/games` lives on the root btrfs partition and should have at least 200-300 GiB available for serious testing.
+
+The installer must reject disks smaller than 256 GiB.
+
 ## User Creation
 
 The user enters:
@@ -49,6 +57,31 @@ The user enters:
 - computer name
 
 The installer validates the username and computer name before starting. The created user is added to `wheel` for administration through `sudo`. The root account is locked after installation; daily work, games, launchers, and the desktop use the created normal user.
+
+## Installed Branding And Tools
+
+The installed system must receive FlasterOS identity and tools from the live profile, not fall back to plain Arch defaults for user-facing identity.
+
+Required installed files:
+
+```text
+/etc/os-release
+/usr/local/bin/ard-check-system
+/opt/ard-os/diagnostics/ard-diagnostics.py
+/usr/share/applications/ard-diagnostics.desktop
+/etc/pacman.conf
+```
+
+Validation after installation:
+
+```bash
+grep -E '^(NAME|PRETTY_NAME|ID)=' /etc/os-release
+test -x /usr/local/bin/ard-check-system
+test -x /opt/ard-os/diagnostics/ard-diagnostics.py
+test -f /usr/share/applications/ard-diagnostics.desktop
+grep -A1 '^\[multilib\]' /etc/pacman.conf
+ard-check-system --report
+```
 
 ## Bootloader Installation
 

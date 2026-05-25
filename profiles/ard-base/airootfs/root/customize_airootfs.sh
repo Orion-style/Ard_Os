@@ -4,6 +4,7 @@ set -euo pipefail
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
 systemctl enable power-profiles-daemon.service || true
+systemctl enable bluetooth.service || true
 systemctl enable qemu-guest-agent.service || true
 systemctl enable vboxservice.service || true
 

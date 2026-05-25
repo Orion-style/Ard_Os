@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-prepare-proton
+
+Checks whether Proton is available in common Steam compatibility paths.
+If Proton is missing, starts Steam so the user can enable Steam Play and download Proton.
+Run as the normal user, not root.
+EOF
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ "$#" -ne 0 ]]; then
+  echo "Unknown option: $1" >&2
+  usage
+  exit 2
+fi
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Do not run Steam or Proton preparation as root." >&2
+  exit 1
+fi
+
+find_proton_runner() {
+  local roots=(
+    "$HOME/.steam/root/compatibilitytools.d"
+    "$HOME/.local/share/Steam/compatibilitytools.d"
+    "$HOME/.local/share/Steam/steamapps/common"
+    "$HOME/.steam/root/steamapps/common"
+  )
+  local root candidate
+  for root in "${roots[@]}"; do
+    [[ -d "$root" ]] || continue
+    while IFS= read -r -d '' candidate; do
+      printf '%s\n' "$candidate"
+      return 0
+    done < <(find "$root" -type f -name proton -print0 2>/dev/null | sort -z)
+  done
+  command -v proton 2>/dev/null || true
+}
+
+proton_runner="$(find_proton_runner)"
+if [[ -n "$proton_runner" ]]; then
+  echo "Proton found: $proton_runner"
+  exit 0
+fi
+
+echo "Proton was not found in Steam compatibility paths."
+echo "Steam must download Proton before Proton profiles can work."
+echo "In Steam: Settings -> Compatibility -> Enable Steam Play, then install or select Proton Experimental / Proton 10+ when available."
+
+if command -v steam >/dev/null 2>&1; then
+  steam >/tmp/ard-prepare-proton-steam.log 2>&1 &
+  echo "Steam started. After Steam downloads Proton, run ard-prepare-proton again."
+else
+  echo "Steam is not installed." >&2
+  exit 1
+fi

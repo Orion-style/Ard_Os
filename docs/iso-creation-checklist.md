@@ -41,6 +41,8 @@ The package list must include:
 - Wine, Steam, DXVK/VKD3D-related packages, Gamescope, MangoHud, and Gamemode.
 - Diagnostic tools such as `pciutils`, `vulkan-tools`, `mesa-utils`, `curl`, and `jq`.
 - VM guest packages for QEMU and VirtualBox.
+- Proton preparation helper: `ard-prepare-proton`.
+- Wine-prefix DXVK helper: `ard-setup-wine-dxvk`.
 
 Validation:
 
@@ -59,6 +61,8 @@ The ISO must already configure:
 - Launcher desktop icon.
 - Settings Center desktop icon.
 - Diagnostics desktop icon.
+- Diagnostics command and Python backend installed into the target system.
+- FlasterOS `/etc/os-release` copied into the installed system.
 - Baseline KDE theme/user settings.
 
 Validation:

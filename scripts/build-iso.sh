@@ -6,6 +6,17 @@ profile="$repo_root/profiles/ard-base"
 work_dir="$repo_root/work"
 out_dir="$repo_root/out"
 stable_iso="$out_dir/FlasterOS.iso"
+version_file="$repo_root/VERSION"
+version="${FLASTEROS_VERSION:-}"
+
+if [[ -z "$version" && -f "$version_file" ]]; then
+  version="$(tr -d '[:space:]' < "$version_file")"
+fi
+if [[ -z "$version" ]]; then
+  version="$(date +%Y.%m.%d)"
+fi
+release_iso="$out_dir/FlasterOS-$version.iso"
+release_checksum="$release_iso.sha256"
 
 if ! command -v mkarchiso >/dev/null 2>&1; then
   echo "mkarchiso not found. Install archiso first: sudo pacman -S archiso" >&2
@@ -22,4 +33,8 @@ if [[ -z "$latest_iso" ]]; then
 fi
 
 cp -f "$latest_iso" "$stable_iso"
+cp -f "$latest_iso" "$release_iso"
+(cd "$out_dir" && sha256sum "$(basename "$release_iso")" > "$(basename "$release_checksum")")
 echo "ISO ready: $stable_iso"
+echo "Release ISO ready: $release_iso"
+echo "Checksum ready: $release_checksum"

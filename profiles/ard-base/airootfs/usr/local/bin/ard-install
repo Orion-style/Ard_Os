@@ -111,7 +111,35 @@ if [[ ! -d /sys/firmware/efi ]]; then
   exit 1
 fi
 
+parent_disk() {
+  local dev="$1"
+  local pkname
+  pkname="$(lsblk -no PKNAME "$dev" 2>/dev/null | head -n 1 | tr -d '[:space:]')"
+  if [[ -n "$pkname" ]]; then
+    printf '/dev/%s\n' "$pkname"
+  else
+    readlink -f "$dev"
+  fi
+}
+
+live_source="$(findmnt -n -o SOURCE /run/archiso/bootmnt 2>/dev/null || true)"
+if [[ -n "$live_source" && -b "$live_source" ]]; then
+  live_disk="$(parent_disk "$live_source")"
+  target_disk="$(readlink -f "$disk")"
+  if [[ "$target_disk" == "$live_disk" ]]; then
+    echo "Refusing to install to the current live USB device: $disk" >&2
+    exit 2
+  fi
+fi
+
+if ! curl -I --max-time 10 https://archlinux.org >/dev/null 2>&1; then
+  echo "Internet connection is required before installation because pacstrap downloads packages from Arch mirrors." >&2
+  echo "Connect Wi-Fi or Ethernet, then start the installer again." >&2
+  exit 1
+fi
+
 echo "Target disk: $disk"
+lsblk -dn -o NAME,SIZE,MODEL,TYPE,RM "$disk"
 echo "Hostname:    $hostname"
 echo "Username:    $username"
 echo "User model:  root is for administration; $username is for desktop, games, and launchers."
@@ -139,16 +167,16 @@ fi
 disk_size_bytes="$(lsblk -b -dn -o SIZE "$disk" | tr -d '[:space:]')"
 disk_size_mib="$((disk_size_bytes / 1024 / 1024))"
 efi_end_mib=1025
-minimum_disk_mib=30720
-minimum_home_mib=8192
+minimum_disk_mib=262144
+minimum_home_mib=32768
 if (( disk_size_mib < minimum_disk_mib )); then
-  echo "Target disk must be at least 30 GiB." >&2
+  echo "Target disk must be at least 256 GiB for Ard OS Gaming." >&2
   exit 2
 fi
 available_mib="$((disk_size_mib - efi_end_mib))"
-root_size_mib="$((available_mib * 75 / 100))"
-if (( root_size_mib < 20480 )); then
-  root_size_mib=20480
+root_size_mib="$((available_mib * 85 / 100))"
+if (( root_size_mib < 204800 )); then
+  root_size_mib=204800
 fi
 if (( available_mib - root_size_mib < minimum_home_mib )); then
   root_size_mib="$((available_mib - minimum_home_mib))"
@@ -193,7 +221,8 @@ mount --mkdir "$efi_part" /mnt/boot
 
 pacstrap -K /mnt \
   base linux linux-firmware \
-  btrfs-progs networkmanager sudo vim nano pciutils jq pacman-contrib qemu-guest-agent spice-vdagent virtualbox-guest-utils \
+  btrfs-progs networkmanager sudo vim nano pciutils usbutils jq pacman-contrib qemu-guest-agent spice-vdagent virtualbox-guest-utils \
+  bluez bluez-utils bluedevil steam-devices \
   alsa-utils sof-firmware \
   pipewire pipewire-alsa pipewire-audio pipewire-jack pipewire-pulse wireplumber \
   plasma-desktop plasma-nm sddm konsole dolphin firefox \
@@ -203,7 +232,10 @@ pacstrap -K /mnt \
   vulkan-intel vulkan-radeon lib32-vulkan-intel lib32-vulkan-radeon vulkan-tools \
   wine wine-gecko wine-mono winetricks steam \
   vkd3d lib32-vkd3d mangohud lib32-mangohud gamemode lib32-gamemode gamescope \
-  intel-ucode amd-ucode
+  intel-ucode amd-ucode zram-generator
+
+install -Dm644 /etc/pacman.conf /mnt/etc/pacman.conf
+sed -i '/^\#\[multilib\]/,+1 s/^#//' /mnt/etc/pacman.conf
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
@@ -211,15 +243,20 @@ install -Dm755 /usr/local/bin/ard-create-game /mnt/usr/local/bin/ard-create-game
 install -Dm755 /usr/local/bin/ard-run-game /mnt/usr/local/bin/ard-run-game
 install -Dm755 /usr/local/bin/ard-launcher /mnt/usr/local/bin/ard-launcher
 install -Dm755 /usr/local/bin/ard-settings-center /mnt/usr/local/bin/ard-settings-center
+install -Dm755 /usr/local/bin/ard-check-system /mnt/usr/local/bin/ard-check-system
 install -Dm755 /usr/local/bin/ard-snapshot /mnt/usr/local/bin/ard-snapshot
 install -Dm755 /usr/local/bin/ard-gaming-session /mnt/usr/local/bin/ard-gaming-session
 install -Dm755 /usr/local/bin/ard-install-gpu-drivers /mnt/usr/local/bin/ard-install-gpu-drivers
 install -Dm755 /usr/local/bin/ard-install-gaming-compat /mnt/usr/local/bin/ard-install-gaming-compat
+install -Dm755 /usr/local/bin/ard-setup-wine-dxvk /mnt/usr/local/bin/ard-setup-wine-dxvk
+install -Dm755 /usr/local/bin/ard-prepare-proton /mnt/usr/local/bin/ard-prepare-proton
+install -Dm644 /etc/os-release /mnt/etc/os-release
 install -Dm644 /etc/skel/.config/kdeglobals /mnt/etc/skel/.config/kdeglobals
 install -Dm644 /etc/skel/.config/kscreenlockerrc /mnt/etc/skel/.config/kscreenlockerrc
 install -Dm644 /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc /mnt/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
 install -Dm755 /opt/ard-os/launcher/ard-launcher.py /mnt/opt/ard-os/launcher/ard-launcher.py
 install -Dm755 /opt/ard-os/settings/ard-settings-center.py /mnt/opt/ard-os/settings/ard-settings-center.py
+install -Dm755 /opt/ard-os/diagnostics/ard-diagnostics.py /mnt/opt/ard-os/diagnostics/ard-diagnostics.py
 install -Dm644 /usr/share/flasteros/branding/flasteros-logo.svg /mnt/usr/share/flasteros/branding/flasteros-logo.svg
 install -Dm644 /usr/share/flasteros/branding/flasteros-wallpaper.svg /mnt/usr/share/flasteros/branding/flasteros-wallpaper.svg
 install -Dm644 /usr/share/icons/hicolor/scalable/apps/flasteros.svg /mnt/usr/share/icons/hicolor/scalable/apps/flasteros.svg
@@ -232,8 +269,10 @@ install -Dm644 /usr/share/sddm/themes/flasteros/metadata.desktop /mnt/usr/share/
 install -Dm644 /usr/share/sddm/themes/flasteros/Main.qml /mnt/usr/share/sddm/themes/flasteros/Main.qml
 install -Dm644 /usr/share/applications/ard-launcher.desktop /mnt/usr/share/applications/ard-launcher.desktop
 install -Dm644 /usr/share/applications/ard-settings-center.desktop /mnt/usr/share/applications/ard-settings-center.desktop
+install -Dm644 /usr/share/applications/ard-diagnostics.desktop /mnt/usr/share/applications/ard-diagnostics.desktop
 install -Dm644 /usr/share/xsessions/ard-gaming.desktop /mnt/usr/share/xsessions/ard-gaming.desktop
 install -Dm644 /usr/share/xsessions/ard-desktop.desktop /mnt/usr/share/xsessions/ard-desktop.desktop
+install -Dm644 /etc/systemd/zram-generator.conf /mnt/etc/systemd/zram-generator.conf
 
 arch-chroot /mnt /bin/bash <<EOF
 set -euo pipefail
@@ -272,8 +311,14 @@ mkinitcpio -P
 systemctl enable NetworkManager.service
 systemctl enable sddm.service
 systemctl enable power-profiles-daemon.service || true
-systemctl enable qemu-guest-agent.service || true
-systemctl enable vboxservice.service || true
+systemctl enable bluetooth.service || true
+virt="\$(systemd-detect-virt || true)"
+if [[ "\$virt" == "qemu" || "\$virt" == "kvm" ]]; then
+  systemctl enable qemu-guest-agent.service || true
+  systemctl enable spice-vdagentd.service || true
+elif [[ "\$virt" == "oracle" ]]; then
+  systemctl enable vboxservice.service || true
+fi
 useradd -m -G wheel -s /bin/bash "$username"
 install -d -m 0755 /opt/ard-os
 install -d -m 0775 -o "$username" -g wheel /games

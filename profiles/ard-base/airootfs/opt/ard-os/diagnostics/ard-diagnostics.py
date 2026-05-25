@@ -16,11 +16,12 @@ from tkinter import messagebox, scrolledtext, ttk
 REPORT_DIR = Path.home() / "ard-diagnostics"
 REPORT_FILE = REPORT_DIR / "report.txt"
 GAMES_DIR = Path("/games")
+BETA_WARNING = "Beta test version. Errors are possible."
 MAX_COMMAND_CHARS = 12000
 MAX_LOG_CHARS = 20000
 NETWORK_TARGETS = ("archlinux.org", "steamcdn-a.akamaihd.net")
 SECRET_PATTERNS = (
-    re.compile(r"(?i)(password|passwd|token|secret|apikey|api_key|authorization|cookie)\s*[:=]\s*\S+"),
+    re.compile(r"(?i)(password|passwd|token|secret|apikey|api_key|private_key|ssh_key|access_key|secret_key|authorization|cookie)\s*[:=]\s*\S+"),
     re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
 )
 
@@ -198,6 +199,7 @@ def find_dxvk_paths(limit=50):
 
 def collect_network(report):
     report.section("Network")
+    report.command("Network devices", ["sh", "-c", "nmcli device status || ip link"], timeout=20)
     internet = run(["curl", "-I", "--max-time", "10", "https://archlinux.org"], timeout=15)
     report.status("internet reachable", bool(internet and internet.returncode == 0))
     for host in NETWORK_TARGETS:
@@ -213,6 +215,28 @@ def collect_network(report):
         report.status("update servers reachable", bool(update and update.returncode == 0), target)
     else:
         report.status("update servers reachable", False, "No enabled pacman mirror found.")
+
+
+def collect_devices(report):
+    report.section("Devices")
+    report.command("USB devices", ["sh", "-c", "lsusb 2>/dev/null || true"], timeout=20)
+    report.command("Input devices", ["sh", "-c", "libinput list-devices 2>/dev/null || ls /dev/input 2>/dev/null || true"], timeout=20)
+    bluetooth = report.command("Bluetooth controller", ["sh", "-c", "bluetoothctl list 2>/dev/null || true"], timeout=20)
+    report.status("Bluetooth tool available", have("bluetoothctl"))
+    report.status("Bluetooth controller detected", bool(bluetooth and (bluetooth.stdout or "").strip()))
+    audio = report.command("Audio devices", ["wpctl", "status"], timeout=20)
+    report.status("PipeWire audio visible", bool(audio and audio.returncode == 0))
+
+
+def collect_security(report):
+    report.section("Security")
+    pacman_conf = report.command("Pacman trust settings", ["sh", "-c", "grep -E '^(SigLevel|\\[core\\]|\\[extra\\]|\\[multilib\\])' /etc/pacman.conf"], timeout=20)
+    report.status("pacman signatures required", bool(pacman_conf and "SigLevel" in (pacman_conf.stdout or "") and "Required" in (pacman_conf.stdout or "")))
+    perms = report.command("System folder permissions", ["sh", "-c", "stat -c '%U %G %A %n' /bin /usr /etc /boot"], timeout=20)
+    writable = run(["sh", "-c", "test ! -w /bin && test ! -w /usr && test ! -w /etc && test ! -w /boot"], timeout=20)
+    report.status("system folders are not writable by this user", bool(perms and writable and writable.returncode == 0))
+    games_perms = report.command("Games folder permissions", ["sh", "-c", "stat -c '%U %G %A %n' /games 2>/dev/null || true"], timeout=20)
+    report.status("games folder exists", bool(games_perms and "/games" in (games_perms.stdout or "")))
 
 
 def first_pacman_mirror():
@@ -279,6 +303,8 @@ def generate_report():
     collect_wine(report)
     collect_dxvk(report)
     collect_network(report)
+    collect_devices(report)
+    collect_security(report)
     collect_disk(report)
     collect_logs(report)
     text = report.text()
@@ -306,6 +332,7 @@ class DiagnosticsApp(tk.Tk):
         self.save_button = ttk.Button(controls, text="Create report", command=self.create_report)
         self.save_button.pack(side=tk.LEFT, padx=(8, 0))
         ttk.Label(controls, textvariable=self.status, anchor=tk.W).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+        ttk.Label(root, text=BETA_WARNING, foreground="#b36b00").pack(anchor=tk.W, pady=(0, 8))
         self.output = scrolledtext.ScrolledText(root, wrap=tk.WORD)
         self.output.pack(fill=tk.BOTH, expand=True)
 
@@ -335,7 +362,7 @@ class DiagnosticsApp(tk.Tk):
         self.status.set(f"Report saved: {REPORT_FILE}")
         self.check_button.configure(state=tk.NORMAL)
         self.save_button.configure(state=tk.NORMAL)
-        messagebox.showinfo("Report created", f"Saved report.txt to:\n{REPORT_FILE}", parent=self)
+        messagebox.showinfo("Report created", f"Saved report.txt to:\n{REPORT_FILE}\n\nSend this report with your hardware model, what failed, and what you clicked before the error.", parent=self)
 
     def _failed(self, error):
         self.status.set(error)

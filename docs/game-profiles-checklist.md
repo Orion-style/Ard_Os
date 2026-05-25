@@ -26,6 +26,16 @@ Example:
 
 Use `custom_runner` when a game needs a specific runner path or command.
 
+For Proton, do not assume a `proton` command exists in `PATH`. The launcher and `ard-run-game` should search common Steam compatibility tool paths first. If a game needs a specific Proton build, set `custom_runner`.
+
+Before using a Proton profile on a fresh install, run:
+
+```bash
+ard-prepare-proton
+```
+
+Steam must download Proton before Proton profiles are guaranteed to work.
+
 ## 9.2 Add Environment Variables
 
 Each profile has its own `env` object:

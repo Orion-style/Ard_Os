@@ -3,6 +3,9 @@ arch-install-scripts
 alsa-utils
 base
 bind
+bluedevil
+bluez
+bluez-utils
 btrfs-progs
 curl
 dhclient
@@ -56,9 +59,11 @@ sddm
 sof-firmware
 spice-vdagent
 steam
+steam-devices
 sudo
 systemd-resolvconf
 tk
+usbutils
 vim
 virtualbox-guest-utils
 vulkan-icd-loader
@@ -75,3 +80,4 @@ xdg-user-dirs
 xorg-xrandr
 xorg-server
 xorg-xwayland
+zram-generator

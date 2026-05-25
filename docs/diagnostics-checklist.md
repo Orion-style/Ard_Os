@@ -47,7 +47,7 @@ The temporary prefix must be created outside the user's game prefixes and remove
 
 The report must show:
 
-- DXVK availability.
+- DXVK availability through Proton, Steam paths, or a documented Wine-prefix/system setup.
 - VKD3D package availability.
 - Whether the runtime can see Vulkan.
 

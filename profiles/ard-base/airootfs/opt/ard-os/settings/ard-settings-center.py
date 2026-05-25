@@ -12,6 +12,7 @@ from tkinter import messagebox, scrolledtext, simpledialog, ttk
 CONFIG_DIR = Path.home() / ".config" / "ard-os"
 PERFORMANCE_CONFIG = CONFIG_DIR / "performance.json"
 UPDATE_LOG = Path("/var/log/flasteros/update.log")
+BETA_WARNING = "Beta test version. Errors are possible."
 REBOOT_UPDATE_PACKAGES = (
     "linux",
     "linux-firmware",
@@ -85,6 +86,7 @@ class SettingsCenter(tk.Tk):
         heading.pack(fill=tk.X, pady=(0, 8))
         ttk.Label(heading, text="FlasterOS", style="Brand.TLabel").pack(side=tk.LEFT)
         ttk.Label(heading, text="Settings Center").pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Label(heading, text=BETA_WARNING, foreground="#b36b00").pack(side=tk.LEFT, padx=(16, 0))
         ttk.Button(heading, text="Refresh", command=self.refresh_all).pack(side=tk.RIGHT)
 
         self.tabs = ttk.Notebook(root)
@@ -206,6 +208,8 @@ class SettingsCenter(tk.Tk):
         ttk.Checkbutton(tab, text="Enable MangoHud by default for new game profiles", variable=self.global_mangohud).grid(row=2, column=1, sticky=tk.W, pady=6)
         ttk.Checkbutton(tab, text="Use Gamemode for supported launches", variable=self.global_gamemode).grid(row=3, column=1, sticky=tk.W, pady=6)
         ttk.Button(tab, text="Apply Performance", command=self.apply_performance).grid(row=4, column=1, sticky=tk.W, pady=(12, 0))
+        ttk.Button(tab, text="Prepare Proton", command=self.prepare_proton).grid(row=5, column=1, sticky=tk.W, pady=(12, 0))
+        ttk.Label(tab, text="Plain Wine DirectX 9/10/11 games need DXVK inside that game's prefix. Use ard-setup-wine-dxvk with the game config after plain Wine works.", wraplength=620).grid(row=6, column=1, sticky=tk.W, pady=(8, 0))
 
     def _build_system_tab(self):
         tab = ttk.Frame(self.tabs, padding=12)
@@ -395,10 +399,12 @@ class SettingsCenter(tk.Tk):
         self._run_background(["xrandr", "--output", self.monitor.get(), "--primary"], "Main monitor updated", self.refresh_display)
 
     def _load_performance(self):
+        defaults = {"performance_mode": "balanced", "fps_limit": 60, "mangohud": False, "gamemode": True}
         try:
-            return json.loads(PERFORMANCE_CONFIG.read_text(encoding="utf-8"))
+            config = json.loads(PERFORMANCE_CONFIG.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return {}
+            return defaults
+        return {**defaults, **config}
 
     def apply_performance(self):
         try:
@@ -421,6 +427,12 @@ class SettingsCenter(tk.Tk):
             self._run_background(["powerprofilesctl", "set", self.performance_mode.get()], "Performance updated")
         else:
             self.status.set(f"Performance settings saved to {PERFORMANCE_CONFIG}")
+
+    def prepare_proton(self):
+        if have("ard-prepare-proton"):
+            self._run_background(["ard-prepare-proton"], "Proton preparation finished")
+        else:
+            self._error("Prepare Proton", "ard-prepare-proton is not installed.")
 
     def refresh_system(self):
         version = "FlasterOS"
@@ -505,6 +517,10 @@ class SettingsCenter(tk.Tk):
         if not self.update_rows:
             self._error("Install Updates", "Check for updates first.")
             return
+        trust_error = self._pacman_trust_error()
+        if trust_error:
+            self._error("Install Updates", trust_error)
+            return
         reboot = any(row["reboot"] for row in self.update_rows)
         message = f"Install {len(self.update_rows)} update(s) now?\n\nA btrfs snapshot will be created first. A log will be written to {UPDATE_LOG}."
         if reboot:
@@ -533,6 +549,32 @@ class SettingsCenter(tk.Tk):
             self.install_updates_button.configure(state=tk.NORMAL)
 
         self._run_background(command, f"Updates installed. Log: {UPDATE_LOG}", done, timeout=3600, error_callback=failed)
+
+    def _pacman_trust_error(self):
+        try:
+            lines = Path("/etc/pacman.conf").read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError as exc:
+            return f"Cannot verify pacman trust settings: {exc}"
+        siglevels = []
+        active_repos = []
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                repo = line.strip("[]")
+                if repo != "options":
+                    active_repos.append(repo)
+                continue
+            if line.lower().startswith("siglevel"):
+                siglevels.append(line.split("=", 1)[1].strip())
+        if not any("Required" in level and "Never" not in level for level in siglevels):
+            return "Refusing to update because pacman signature verification is not required."
+        allowed_repos = {"core", "extra", "multilib"}
+        unknown = [repo for repo in active_repos if repo not in allowed_repos]
+        if unknown:
+            return f"Review untrusted pacman repositories before updating: {', '.join(unknown)}"
+        return ""
 
     def _update_category(self, package):
         if package in ("linux", "linux-firmware") or package.endswith("-ucode"):

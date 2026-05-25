@@ -83,6 +83,14 @@ Validation:
 - At least one Proton version appears in Steam compatibility settings after Steam downloads it.
 - No Steam or Proton process runs as root.
 
+Helper:
+
+```bash
+ard-prepare-proton
+```
+
+This checks common Steam compatibility paths for Proton. If Proton is missing, it starts Steam and tells the user to enable Steam Play and download Proton. Proton is not guaranteed immediately after package installation; Steam must download a compatibility tool first.
+
 ## 6.3 Install DXVK
 
 DXVK is needed for DirectX 9/10/11 games.
@@ -93,11 +101,19 @@ DirectX 11 -> DXVK -> Vulkan
 
 For Steam games, use Proton. Proton includes DXVK for DirectX 9/10/11 translation.
 
+Do not assume a separate system `dxvk` package is installed from the official Arch repositories. In this project, Proton is the primary DXVK path. Standalone Wine prefixes need an explicit, documented DXVK setup such as `winetricks dxvk`, a trusted custom DXVK install, or a package source chosen by the maintainer.
+
 For a standalone Wine prefix, install DXVK into that prefix only after plain Wine works:
 
 ```bash
 WINEPREFIX="$HOME/.wine-ard-test" wineboot --init
 WINEPREFIX="$HOME/.wine-ard-test" winetricks dxvk
+```
+
+For a FlasterOS game config:
+
+```bash
+ard-setup-wine-dxvk /games/GameName/config.json
 ```
 
 Validation:
@@ -193,7 +209,7 @@ Pay attention to:
 
 - Wrong Wine prefix.
 - Missing Vulkan support.
-- Missing DXVK.
+- Missing DXVK in the selected Proton or Wine-prefix path.
 - Missing Windows libraries.
 - Games that require anti-cheat.
 - Games that require a specific Windows API version.

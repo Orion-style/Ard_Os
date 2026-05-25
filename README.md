@@ -1,6 +1,8 @@
-# Ard OS Base System
+# FlasterOS / Ard OS Base System
 
-This repository starts Ard OS as an Arch Linux based distribution foundation.
+FlasterOS / Ard OS is an Arch-based gaming distribution. It is not a standalone operating system with its own kernel. The project uses the Linux kernel, Arch Linux packages, systemd, KDE Plasma, Wine/Proton, and gaming tools to build a focused installable gaming system.
+
+Current naming note: `FlasterOS` is the public ISO/branding name. Some internal tools and paths still use the older `ard-*` prefix. This must be cleaned up before a polished public release.
 
 Stage 4 is intentionally narrow: boot a live ISO, load a graphical desktop, connect to the internet, install to disk, and keep working after reboot. It does not include Proton, a game launcher, game libraries, or custom branding beyond the minimum Ard OS identity.
 
@@ -34,6 +36,18 @@ Reasons:
 - `docs/iso-creation-checklist.md`: Stage 15 ISO creation and boot validation.
 - `docs/installer-checklist.md`: Stage 16 guided installer validation.
 - `docs/design-checklist.md`: Stage 17 FlasterOS design validation.
+- `docs/performance-checklist.md`: Stage 18 performance validation.
+- `docs/hardware-support-checklist.md`: Stage 19 hardware support validation.
+- `docs/game-compatibility-table.md`: Stage 20 game compatibility table.
+- `docs/hoyoverse-compatibility.md`: explicit Hoyoverse compatibility status.
+- `docs/security-checklist.md`: Stage 21 security validation.
+- `docs/mvp-checklist.md`: Stage 22 MVP validation.
+- `docs/beta-checklist.md`: Stage 23 beta validation.
+- `docs/beta-user-guide.md`: beta tester installation, game, and log instructions.
+- `docs/beta-bug-list.md`: beta bug tracking template and issue list.
+- `docs/release-checklist.md`: Stage 24 release validation.
+- `docs/download-page.md`: release download page draft.
+- `docs/release-notes.md`: release changelog, known issues, and recovery notes.
 
 ## Build Requirements
 
@@ -57,6 +71,13 @@ The stable install image path is:
 out/FlasterOS.iso
 ```
 
+Release builds also create a versioned ISO and checksum using `VERSION`:
+
+```text
+out/FlasterOS-0.1.0.iso
+out/FlasterOS-0.1.0.iso.sha256
+```
+
 ## Test The ISO
 
 ```bash
@@ -77,6 +98,8 @@ From the live desktop, open **Install FlasterOS**.
 The guided installer asks for language, target disk, username, password, and computer name. It is destructive and asks for confirmation before touching the selected disk.
 
 The installed system uses a FAT32 EFI partition, a btrfs root partition, and a separate btrfs `/home` partition. The root partition keeps separate system subvolumes for games, logs, and snapshots. System rollback does not include personal files in `/home`.
+
+The guided installer targets gaming storage, not tiny desktop tests. It requires at least a 256 GiB target disk, with 512 GiB recommended for testing Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero together.
 
 After install and reboot:
 
@@ -176,6 +199,20 @@ DirectX 12 -> VKD3D-Proton -> Vulkan
 ```
 
 Stage 6 passes when `.exe` files start, a Wine prefix is created, Steam starts, a simple Windows game starts through Wine or Proton, and MangoHud can show FPS. Do not bypass anti-cheat; anti-cheat failure is a compatibility limitation.
+
+Important compatibility limit: FlasterOS can run some Windows games through Wine or Proton, but that does not prove Hoyoverse compatibility. Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero may fail because of anti-cheat, launcher behavior, or Wine/Proton regressions. Do not claim Hoyoverse support until the specific game is tested on an installed system and recorded in `docs/hoyoverse-compatibility.md`.
+
+Fresh installs do not guarantee Proton until Steam downloads a compatibility tool. Prepare or verify Proton with:
+
+```bash
+ard-prepare-proton
+```
+
+Plain Wine DirectX 9/10/11 games need DXVK inside the selected Wine prefix. For a FlasterOS game config, use:
+
+```bash
+ard-setup-wine-dxvk /games/GameName/config.json
+```
 
 ## Gaming OS Structure
 
@@ -338,6 +375,122 @@ Stage 17 makes FlasterOS visually distinct from a default Arch/KDE install. The 
 
 The default visual direction is restrained: dark neutral surfaces, teal and blue accents, Breeze-compatible controls/icons/cursor, Noto Sans fonts, and no heavy animations. Stage 17 passes when boot, login, desktop wallpaper, launcher, and settings all show one consistent FlasterOS identity.
 
+## Performance
+
+Stage 18 keeps system overhead low while preserving the services that make the gaming system usable. VM guest services are enabled only for matching virtualized installs, while bare-metal installs keep them disabled. NetworkManager, SDDM, PipeWire, WirePlumber, updates, snapshots, graphics drivers, and power profile controls must remain intact.
+
+Game launches use GameMode automatically by default when `gamemoderun` is installed. The Settings Center can still turn this off through `~/.config/ard-os/performance.json`.
+
+The profile installs `zram-generator` and configures `/etc/systemd/zram-generator.conf` so zram swap is created at boot. Launcher and `ard-run-game` starts keep DXVK and Mesa shader caches enabled to reduce repeated stutter.
+
+Validate Stage 18 with:
+
+```bash
+systemctl --type=service --state=running
+gamemoded -t
+zramctl
+swapon --show
+ard-run-game /games/GameName/config.json
+```
+
+Do not move to Stage 19 until games start quickly, background load is low, FPS is stable, frametime is smooth, and sound, network, updates, rollback, and graphics still work.
+
+## Hardware Support
+
+Stage 19 proves that FlasterOS works beyond one development PC. Test at least NVIDIA, AMD, and Intel GPUs, plus a desktop PC, a laptop, and a laptop with hybrid graphics.
+
+The profile includes firmware, NetworkManager, PipeWire/WirePlumber, SOF firmware, Bluetooth support through BlueZ and Bluedevil, and Steam device rules for common controller access. Bluetooth is enabled by default because wireless controllers and headsets are part of the target gaming hardware.
+
+Validate each machine with:
+
+```bash
+lspci -nnk | grep -EA4 'VGA|3D|Display'
+glxinfo -B
+vulkaninfo --summary
+nmcli device status
+bluetoothctl list
+wpctl status
+ard-check-system --report
+```
+
+Stage 19 passes when the OS boots on several hardware configurations, network works, sound and microphone work, graphics pass Vulkan/OpenGL checks, devices are detected, and games start from the launcher.
+
+## Security
+
+Stage 21 protects the system from accidental damage during normal use. Games and the launcher run as the normal user, game files stay under `/games`, and system folders such as `/bin`, `/usr`, `/etc`, and `/boot` remain root-owned.
+
+The launcher and `ard-run-game` refuse root game launches and block game configs, executables, and Wine prefixes outside `/games`. Update installation checks that pacman requires package signatures and that only the expected base repositories are enabled before running `pacman -Syu`.
+
+Launch logs and diagnostics redact common password, token, cookie, authorization, API key, access key, secret key, SSH key, and private key patterns before support reports are sent.
+
+Validate Stage 21 with:
+
+```bash
+test "$(id -u)" -ne 0
+sudo ard-run-game /games/GameName/config.json
+grep -E '^(SigLevel|\[core\]|\[extra\]|\[multilib\])' /etc/pacman.conf
+ard-check-system --report
+```
+
+Do not move to Stage 22 until normal play, launcher use, update checks, logs, network, sound, and display setup do not require a root desktop session.
+
+## MVP
+
+Stage 22 is the first product gate. It does not add polish; it proves the core path works end to end:
+
+```text
+USB install -> first boot -> launcher -> Windows game -> error report -> update -> reboot
+```
+
+The MVP must boot, install, open the interface, connect to the internet, play sound, detect the GPU, start the launcher, run at least one Windows game, create an error report, and update through the Settings Center.
+
+Do not block MVP on an app store, complex design, custom browser, custom file manager, many games, complex animations, or advanced library management. Move to beta only when another person can install FlasterOS and launch a game without help.
+
+## Beta
+
+Stage 23 is the first external test version. It is for finding bugs on other hardware, not for pretending the system is final.
+
+The launcher, Settings Center, and Diagnostics show:
+
+```text
+Beta test version. Errors are possible.
+```
+
+Beta testers use `docs/beta-user-guide.md` to download the ISO, write it to a USB drive, install, start a game, and send logs. The main report path is:
+
+```text
+~/ard-diagnostics/report.txt
+```
+
+Beta bugs are tracked in `docs/beta-bug-list.md` with user hardware, what failed, error logs, fix status, and retest result. Move to release only when critical errors are fixed.
+
+## Release
+
+Stage 24 is the normal distribution gate. A release must have a final ISO name, version, checksum, installation instruction, changelog, download page, system requirements, known issues, supported games list, updates, and rollback.
+
+The release build path is:
+
+```bash
+bash scripts/build-iso.sh
+sha256sum -c out/FlasterOS-0.1.0.iso.sha256
+```
+
+Release materials:
+
+- `VERSION`
+- `docs/release-checklist.md`
+- `docs/download-page.md`
+- `docs/release-notes.md`
+- `docs/game-compatibility-table.md`
+
+Main release checkpoint:
+
+```text
+ISO -> installation -> system launch -> launcher launch -> one game launch -> log collection -> reboot -> everything still works
+```
+
+Do not move to advanced design, an app store, or complex features until this checkpoint works.
+
 ## Current Scope
 
 Included:
@@ -355,6 +508,7 @@ Included:
 - AMD/Intel Mesa and Vulkan driver packages
 - Wine base compatibility packages
 - Steam, Proton path, DXVK/VKD3D validation, and gaming helper tools
+- Proton preparation and Wine-prefix DXVK setup helpers
 - structured game directories, per-game configs, prefixes, and logs
 - graphical game launcher
 - per-game launch profiles
@@ -366,6 +520,12 @@ Included:
 - installable FlasterOS archiso output at `out/FlasterOS.iso`
 - guided graphical installer with English and Russian language choices
 - FlasterOS logo, wallpaper, login theme, boot splash, app icon, and dark theme defaults
+- performance defaults for GameMode, zram, shader cache, and frametime validation
+- hardware support coverage for Bluetooth and Steam controller device rules
+- security checks for normal-user game launches, trusted updates, and redacted logs
+- MVP validation path for USB install, launcher, Windows game, report, update, and reboot
+- beta warning, tester guide, log collection path, and bug tracking template
+- release artifacts for versioned ISO, checksum, download page, release notes, and compatibility table
 - Firefox
 - Installer backend for UEFI systems
 

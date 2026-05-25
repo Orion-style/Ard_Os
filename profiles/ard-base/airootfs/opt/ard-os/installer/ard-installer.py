@@ -7,7 +7,7 @@ import tempfile
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
 
 MIN_PASSWORD_LEN = 6
@@ -41,6 +41,8 @@ TEXT = {
         "bad_host": "Enter a valid computer name.",
         "bad_password": "Password must be at least 6 characters, must not contain ':', and both password fields must match.",
         "confirm": "This will permanently delete all data on {disk}. Continue?",
+        "type_disk": "Type the target disk path to confirm erasing it:",
+        "internet_required": "Internet is required before installation because packages are downloaded from Arch mirrors.",
         "failed": "Installation failed. Review the log below.",
     },
     "ru": {
@@ -69,6 +71,8 @@ TEXT = {
         "bad_host": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u043e\u0435 \u0438\u043c\u044f \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u0430.",
         "bad_password": "\u041f\u0430\u0440\u043e\u043b\u044c \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c \u043d\u0435 \u043a\u043e\u0440\u043e\u0447\u0435 6 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432, \u043d\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c ':', \u043e\u0431\u0430 \u043f\u043e\u043b\u044f \u0434\u043e\u043b\u0436\u043d\u044b \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0442\u044c.",
         "confirm": "\u0412\u0441\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043d\u0430 {disk} \u0431\u0443\u0434\u0443\u0442 \u0431\u0435\u0437\u0432\u043e\u0437\u0432\u0440\u0430\u0442\u043d\u043e \u0443\u0434\u0430\u043b\u0435\u043d\u044b. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c?",
+        "type_disk": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0443\u0442\u044c \u0446\u0435\u043b\u0435\u0432\u043e\u0433\u043e \u0434\u0438\u0441\u043a\u0430, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0435\u0433\u043e \u043e\u0447\u0438\u0441\u0442\u043a\u0443:",
+        "internet_required": "\u0414\u043b\u044f \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u043d\u0443\u0436\u0435\u043d \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442, \u0442\u0430\u043a \u043a\u0430\u043a \u043f\u0430\u043a\u0435\u0442\u044b \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u044e\u0442\u0441\u044f \u0441 \u0437\u0435\u0440\u043a\u0430\u043b Arch.",
         "failed": "\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u043d\u0435 \u0443\u0434\u0430\u043b\u0430\u0441\u044c. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0436\u0443\u0440\u043d\u0430\u043b \u043d\u0438\u0436\u0435.",
     },
 }
@@ -143,6 +147,7 @@ class Installer(tk.Tk):
 
     def load_disks(self):
         self.disks = []
+        live_disk = self.live_boot_disk()
         result = run_command(["lsblk", "-J", "-b", "-dn", "-o", "NAME,SIZE,MODEL,TYPE,RM"])
         try:
             devices = json.loads(result.stdout).get("blockdevices", [])
@@ -158,8 +163,20 @@ class Installer(tk.Tk):
                 continue
             size_gib = size / 1024 / 1024 / 1024
             device = f"/dev/{name}"
+            if live_disk and device == live_disk:
+                continue
             label = f"{device}  {size_gib:.1f} GiB  {model}  removable={removable}"
             self.disks.append((device, label))
+
+    def live_boot_disk(self):
+        source = run_command(["findmnt", "-n", "-o", "SOURCE", "/run/archiso/bootmnt"]).stdout.strip()
+        if not source:
+            return ""
+        parent = run_command(["lsblk", "-no", "PKNAME", source]).stdout.strip().splitlines()
+        return f"/dev/{parent[0]}" if parent else source
+
+    def internet_available(self):
+        return run_command(["curl", "-I", "--max-time", "10", "https://archlinux.org"]).returncode == 0
 
     def show_disk(self):
         if not self.disks:
@@ -249,6 +266,12 @@ class Installer(tk.Tk):
     def start_install(self):
         disk = self.selected_disk.get()
         if not messagebox.askyesno(self.t("title"), self.t("confirm").format(disk=disk), parent=self):
+            return
+        typed = simpledialog.askstring(self.t("title"), self.t("type_disk"), parent=self)
+        if typed != disk:
+            return
+        if not self.internet_available():
+            messagebox.showerror(self.t("title"), self.t("internet_required"), parent=self)
             return
         self.install_running = True
         self.back_button.configure(state=tk.DISABLED)

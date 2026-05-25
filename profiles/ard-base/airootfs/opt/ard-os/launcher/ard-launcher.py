@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import shutil
 import shlex
 import subprocess
@@ -12,6 +13,51 @@ from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 GAMES_DIR = Path("/games")
 PERFORMANCE_CONFIG = Path.home() / ".config" / "ard-os" / "performance.json"
+BETA_WARNING = "Beta test version. Errors are possible."
+SECRET_PATTERNS = (
+    re.compile(r"(?i)(password|passwd|token|secret|apikey|api_key|private_key|ssh_key|access_key|secret_key|authorization|cookie)\s*[:=]\s*\S+"),
+    re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
+)
+
+
+def redact_log_text(text):
+    clean = text or ""
+    for pattern in SECRET_PATTERNS:
+        clean = pattern.sub(lambda match: match.group(1) + "=<redacted>" if match.lastindex else "<redacted>", clean)
+    home = str(Path.home())
+    if home and home != "/":
+        clean = clean.replace(home, "$HOME")
+    return clean
+
+
+def path_is_under(path, root):
+    try:
+        Path(path).resolve().relative_to(Path(root).resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def proton_candidates():
+    candidates = []
+    roots = (
+        Path.home() / ".steam/root/compatibilitytools.d",
+        Path.home() / ".local/share/Steam/compatibilitytools.d",
+        Path.home() / ".local/share/Steam/steamapps/common",
+        Path.home() / ".steam/root/steamapps/common",
+    )
+    for root in roots:
+        if root.exists():
+            candidates.extend(root.glob("**/proton"))
+    path_runner = shutil.which("proton")
+    if path_runner:
+        candidates.append(Path(path_runner))
+    return sorted({str(path) for path in candidates if path.exists()})
+
+
+def find_proton_runner():
+    candidates = proton_candidates()
+    return candidates[0] if candidates else ""
 
 
 class Game:
@@ -103,6 +149,7 @@ class Launcher(tk.Tk):
         header.pack(fill=tk.X, pady=(0, 10))
         ttk.Label(header, text="FlasterOS", style="Brand.TLabel").pack(side=tk.LEFT)
         ttk.Label(header, text="Launcher").pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Label(header, text=BETA_WARNING, foreground="#b36b00").pack(side=tk.RIGHT)
 
         left = ttk.Frame(root)
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -170,18 +217,24 @@ class Launcher(tk.Tk):
     def validate_game(self, game):
         if os.geteuid() == 0:
             return "Launcher must not run games as root."
+        if not path_is_under(game.config_path.parent, GAMES_DIR):
+            return f"Game config must be stored under {GAMES_DIR}."
         if not str(game.exe):
             return "Config is missing exe path."
         if not game.exe.exists():
             return f"exe file not found: {game.exe}"
+        if not path_is_under(game.exe, GAMES_DIR):
+            return f"Game executable must be stored under {GAMES_DIR}."
         if not str(game.prefix):
             return "Config is missing prefix path."
         if not game.prefix.exists():
             return f"Wine prefix not found: {game.prefix}"
+        if not path_is_under(game.prefix, GAMES_DIR):
+            return f"Wine prefix must be stored under {GAMES_DIR}."
         if game.runner == "wine" and shutil.which("wine") is None:
             return "runner not installed: wine"
         if game.runner in ("proton", "proton-experimental"):
-            proton_runner = game.custom_runner or shutil.which("proton")
+            proton_runner = game.custom_runner or find_proton_runner()
             if not proton_runner:
                 return "runner not installed: proton. Set custom_runner to a Proton executable or use Steam-managed Proton."
             if game.custom_runner and not Path(game.custom_runner).exists() and shutil.which(game.custom_runner) is None:
@@ -220,6 +273,9 @@ class Launcher(tk.Tk):
         for key, value in game.env_vars.items():
             env[str(key)] = str(value)
         env.setdefault("DXVK_HUD", "0")
+        env.setdefault("DXVK_STATE_CACHE", "1")
+        env.setdefault("MESA_SHADER_CACHE_DISABLE", "false")
+        env.setdefault("MESA_SHADER_CACHE_MAX_SIZE", "12G")
         env.update(self._mangohud_env(game))
         command = self._build_command(game)
         command = self._apply_performance_command(command)
@@ -234,9 +290,16 @@ class Launcher(tk.Tk):
             log.write(f"Game: {game.name}\n")
             log.write(f"Command: {' '.join(command)}\n")
             log.write(f"WINEPREFIX: {env.get('WINEPREFIX', '')}\n\n")
+            for key in ("DXVK_STATE_CACHE", "MESA_SHADER_CACHE_DISABLE", "MESA_SHADER_CACHE_MAX_SIZE", "MANGOHUD"):
+                log.write(f"{key}: {env.get(key, '')}\n")
+            log.write("\n")
             log.flush()
             try:
-                proc = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, env=env)
+                proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, text=True, errors="replace")
+                assert proc.stdout
+                for line in proc.stdout:
+                    log.write(redact_log_text(line))
+                    log.flush()
                 code = proc.wait()
             except OSError as exc:
                 code = 1
@@ -264,7 +327,7 @@ class Launcher(tk.Tk):
         if game.runner == "wine":
             command = ["wine", str(game.exe), *args]
         elif game.runner in ("proton", "proton-experimental"):
-            runner = game.custom_runner or shutil.which("proton") or "proton"
+            runner = game.custom_runner or find_proton_runner() or "proton"
             command = [runner, "run", str(game.exe), *args]
         elif game.runner == "custom":
             runner_parts = shlex.split(game.custom_runner)
@@ -281,10 +344,12 @@ class Launcher(tk.Tk):
         return command
 
     def _performance_config(self):
+        defaults = {"gamemode": True, "mangohud": False, "fps_limit": 60, "performance_mode": "balanced"}
         try:
-            return json.loads(PERFORMANCE_CONFIG.read_text(encoding="utf-8"))
+            settings = json.loads(PERFORMANCE_CONFIG.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return {}
+            return defaults
+        return {**defaults, **settings}
 
     def _apply_performance_command(self, command):
         settings = self._performance_config()
@@ -593,4 +658,6 @@ class ProfileEditor(tk.Toplevel):
 
 
 if __name__ == "__main__":
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        raise SystemExit("Do not run the launcher as root.")
     Launcher().mainloop()

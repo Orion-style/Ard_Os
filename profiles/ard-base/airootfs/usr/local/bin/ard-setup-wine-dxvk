@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ard-setup-wine-dxvk /games/GameName/config.json
+
+Installs DXVK into a game's Wine prefix through winetricks.
+Use this for plain Wine DirectX 9/10/11 games. Proton already includes DXVK.
+Run as the normal user, not root.
+EOF
+}
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+config="${1:-}"
+if [[ -z "$config" || ! -f "$config" ]]; then
+  usage >&2
+  exit 2
+fi
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Do not set up Wine prefixes as root." >&2
+  exit 1
+fi
+
+prefix="$(jq -r '.prefix // empty' "$config")"
+runner="$(jq -r '.runner // "wine"' "$config")"
+
+if [[ -z "$prefix" ]]; then
+  echo "Config must contain prefix." >&2
+  exit 2
+fi
+
+case "$(realpath -m "$prefix")" in
+  /games/*) ;;
+  *)
+    echo "Wine prefix must be under /games." >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$runner" != "wine" ]]; then
+  echo "DXVK prefix setup is only needed for plain Wine profiles. Proton includes DXVK." >&2
+  exit 2
+fi
+
+if ! command -v winetricks >/dev/null 2>&1; then
+  echo "winetricks is not installed." >&2
+  exit 1
+fi
+
+mkdir -p "$prefix"
+export WINEPREFIX="$prefix"
+wineboot --init
+winetricks -q dxvk
+echo "DXVK installed into Wine prefix: $prefix"
