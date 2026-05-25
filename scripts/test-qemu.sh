@@ -15,9 +15,15 @@ fi
 
 ovmf_code=""
 for candidate in \
+  /usr/share/edk2/x64/OVMF_CODE.4m.fd \
+  /usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
   /usr/share/edk2/x64/OVMF_CODE.fd \
+  /usr/share/edk2-ovmf/x64/OVMF_CODE.4m.fd \
+  /usr/share/edk2-ovmf/x64/OVMF_CODE.secboot.4m.fd \
   /usr/share/edk2-ovmf/x64/OVMF_CODE.fd \
+  /usr/share/OVMF/x64/OVMF_CODE.4m.fd \
   /usr/share/OVMF/x64/OVMF_CODE.fd \
+  /usr/share/ovmf/x64/OVMF_CODE.4m.fd \
   /usr/share/ovmf/x64/OVMF_CODE.fd; do
   if [[ -f "$candidate" ]]; then
     ovmf_code="$candidate"
